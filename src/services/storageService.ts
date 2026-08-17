@@ -3,10 +3,11 @@ import { STORAGE_KEYS, DEFAULT_CONFIG } from "../config/appConfig";
 import { curriculumLessons } from "../data/curriculum";
 import { sampleQuestions } from "../data/sampleQuestions";
 import { DEFAULT_EXAMS } from "../data/mockExams";
+import { authService } from "./authService";
 
 export interface ActiveAttemptDraft { attemptId:string; studentName:string; className:string; lessonId:string; lessonTitle:string; semester:number; answers:StudentAnswers; flaggedQuestionIds:string[]; currentQuestionIndex:number; startedAt:string; elapsedSeconds:number; }
 const QUESTIONS_STORAGE_KEY="dia_li_11_questions_bank_v4"; const LESSONS_STORAGE_KEY="dia_li_11_lessons_v4"; const EXAMS_STORAGE_KEY="dia_li_11_exams_v4";
-async function onlineContent<T>(path:string, options:RequestInit={}):Promise<T>{ const res=await fetch(path,{...options,headers:{Accept:"application/json",...(options.body?{"Content-Type":"application/json"}:{}),...(options.headers||{})}}); const json=await res.json().catch(()=>({})); if(!res.ok||json.success===false) throw new Error(json.message||`HTTP ${res.status}`); return json.data as T; }
+async function onlineContent<T>(path:string, options:RequestInit={}):Promise<T>{ const res=await fetch(path,{...options,headers:{Accept:"application/json",...authService.headers(),...(options.body?{"Content-Type":"application/json"}:{}),...(options.headers||{})}}); const json=await res.json().catch(()=>({})); if(!res.ok||json.success===false) throw new Error(json.message||`HTTP ${res.status}`); return json.data as T; }
 export const storageService = {
   getStudentProfile():StudentProfile|null{try{const d=localStorage.getItem(STORAGE_KEYS.STUDENT_PROFILE);if(!d)return null;const p=JSON.parse(d);if(!p.studentName||!p.className||!p.dateOfBirth)return null;return p;}catch{return null;}},
   saveStudentProfile(profile:StudentProfile){try{localStorage.setItem(STORAGE_KEYS.STUDENT_PROFILE,JSON.stringify(profile));}catch{}},
