@@ -30,7 +30,6 @@ jobs:
                   raise SystemExit(f'Patch did not change: {label}')
               return text2
 
-          # server.ts
           p = Path('server.ts')
           s = p.read_text(encoding='utf-8')
           s = replace_once(s,
@@ -62,48 +61,24 @@ jobs:
               "      res.json({ success: true, data: { id: record.id, name: record.name, classCode: record.classCode, schoolYear: record.schoolYear, grade: Number(record.grade || 6), teacherName: record.teacherName } });",
               'public class meta grade')
           s = replace_once(s,
-              "        profile: { studentName: student.studentName, className: record.name, dateOfBirth: student.dateOfBirth }, classId: record.id, teacherName: record.teacherName });",
-              "        profile: { studentName: student.studentName, className: record.name, dateOfBirth: student.dateOfBirth, grade: Number(record.grade || 6) }, classId: record.id, teacherName: record.teacherName, grade: Number(record.grade || 6) });",
+              "      res.json({ success: true, sessionId, profile: { studentName: student.studentName, className: record.name, dateOfBirth: student.dateOfBirth }, classId: record.id, teacherName: record.teacherName });",
+              "      res.json({ success: true, sessionId, profile: { studentName: student.studentName, className: record.name, dateOfBirth: student.dateOfBirth, grade: Number(record.grade || 6) }, classId: record.id, teacherName: record.teacherName, grade: Number(record.grade || 6) });",
               'student login grade')
           p.write_text(s, encoding='utf-8')
 
-          # ClassManager.tsx
           p = Path('src/components/admin/ClassManager.tsx')
           s = p.read_text(encoding='utf-8')
-          s = replace_once(s,
-              "  studentCount: number;\n}",
-              "  studentCount: number;\n  grade: 6 | 7 | 8 | 9 | 10 | 11 | 12;\n}",
-              'class interface grade')
-          s = replace_once(s,
-              "  const [name, setName] = useState(\"\");\n",
-              "  const [name, setName] = useState(\"\");\n  const [grade, setGrade] = useState<SchoolClass['grade']>(6);\n",
-              'class grade state')
-          s = replace_once(s,
-              "        body: JSON.stringify({ name: cleanName }),",
-              "        body: JSON.stringify({ name: cleanName, grade }),",
-              'class POST body grade')
-          s = replace_once(s,
-              "      setName(\"\");\n\n      const url",
-              "      setName(\"\");\n      setGrade(6);\n\n      const url",
-              'class reset grade')
-          s = replace_once(s,
-              "      <div className=\"flex flex-col sm:flex-row gap-2\">\n        <input",
-              "      <div className=\"flex flex-col sm:flex-row gap-2\">\n        <select value={grade} onChange={(e) => setGrade(Number(e.target.value) as SchoolClass['grade'])} disabled={loading} className=\"px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold sm:w-32\">\n          {[6,7,8,9,10,11,12].map((g) => <option key={g} value={g}>Khối {g}</option>)}\n        </select>\n        <input",
-              'class grade selector')
-          s = replace_once(s,
-              "                <div className=\"font-bold text-slate-900\">Lớp {c.name}</div>\n                <div className=\"text-[11px] text-slate-500 mt-1\">{c.studentCount || 0} học sinh • Mã lớp {c.classCode}</div>",
-              "                <div className=\"font-bold text-slate-900\">Lớp {c.name}</div>\n                <div className=\"text-[11px] text-slate-500 mt-1\">Khối {c.grade} • {c.studentCount || 0} học sinh • Mã lớp {c.classCode}</div>",
-              'class list grade display')
-          s = s.replace("placeholder=\"Ví dụ: 11A1\"", "placeholder=\"Ví dụ: 11A1\"")
+          s = replace_once(s, "  studentCount: number;\n}", "  studentCount: number;\n  grade: 6 | 7 | 8 | 9 | 10 | 11 | 12;\n}", 'class interface grade')
+          s = replace_once(s, "  const [name, setName] = useState(\"\");\n", "  const [name, setName] = useState(\"\");\n  const [grade, setGrade] = useState<SchoolClass['grade']>(6);\n", 'class grade state')
+          s = replace_once(s, "        body: JSON.stringify({ name: cleanName }),", "        body: JSON.stringify({ name: cleanName, grade }),", 'class POST body grade')
+          s = replace_once(s, "      setName(\"\");\n\n      const url", "      setName(\"\");\n      setGrade(6);\n\n      const url", 'class reset grade')
+          s = replace_once(s, "      <div className=\"flex flex-col sm:flex-row gap-2\">\n        <input", "      <div className=\"flex flex-col sm:flex-row gap-2\">\n        <select value={grade} onChange={(e) => setGrade(Number(e.target.value) as SchoolClass['grade'])} disabled={loading} className=\"px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold sm:w-32\">\n          {[6,7,8,9,10,11,12].map((g) => <option key={g} value={g}>Khối {g}</option>)}\n        </select>\n        <input", 'class grade selector')
+          s = replace_once(s, "                <div className=\"font-bold text-slate-900\">Lớp {c.name}</div>\n                <div className=\"text-[11px] text-slate-500 mt-1\">{c.studentCount || 0} học sinh • Mã lớp {c.classCode}</div>", "                <div className=\"font-bold text-slate-900\">Lớp {c.name}</div>\n                <div className=\"text-[11px] text-slate-500 mt-1\">Khối {c.grade} • {c.studentCount || 0} học sinh • Mã lớp {c.classCode}</div>", 'class list grade display')
           p.write_text(s, encoding='utf-8')
 
-          # StudentProfile type
           p = Path('src/types/index.ts')
           s = p.read_text(encoding='utf-8')
-          s = replace_once(s,
-              "  teacherName?: string;\n}",
-              "  teacherName?: string;\n  grade?: 6 | 7 | 8 | 9 | 10 | 11 | 12;\n}",
-              'student profile grade')
+          s = replace_once(s, "  teacherName?: string;\n}", "  teacherName?: string;\n  grade?: 6 | 7 | 8 | 9 | 10 | 11 | 12;\n}", 'student profile grade')
           p.write_text(s, encoding='utf-8')
           print('grade migration patch complete')
           PY
