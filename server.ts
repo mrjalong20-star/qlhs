@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import { Pool } from "pg";
 
 export type Session = { role: "SUPER_ADMIN" | "TEACHER"; username: string; displayName: string; createdAt: number };
 
@@ -8,23 +9,19 @@ const HEARTBEAT_MAX_GAP_SECONDS = 90;
 const SUPER_ADMIN_USERNAME = process.env.SUPER_ADMIN_USERNAME || "admin";
 const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || "admin@123456";
 
-let pool: any = null;
+let pool: Pool | null = null;
 let dbReady: Promise<void> | null = null;
 
 function getPool() {
   if (!process.env.DATABASE_URL) return null;
   if (!pool) {
-    // Loaded only in production when DATABASE_URL exists. This keeps local dev working without pg installed.
-    // eslint-disable-next-line no-new-func
-    const loadPg = new Function("return import(\'pg\')") as () => Promise<any>;
-    // The promise is stored on the pool variable after module initialization below.
-    pool = loadPg().then(({ Pool }) => new Pool({
+    pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       max: 3,
       idleTimeoutMillis: 10000,
       connectionTimeoutMillis: 10000,
       ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
-    }));
+    });
   }
   return pool;
 }
