@@ -12,6 +12,8 @@ interface AdminLoginModalProps {
 
 type LoginRole = "TEACHER" | "SUPER_ADMIN";
 
+export function AdminLoginModalProps_unused() { return null; }
+
 export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
   const [role, setRole] = useState<LoginRole>("TEACHER");
   const [username, setUsername] = useState("");
@@ -86,8 +88,6 @@ export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalP
             <input id="input-admin-password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => { setPassword(e.target.value); if (error) setError(""); }} placeholder="Nhập mật khẩu..." autoComplete="current-password" className="w-full pl-4 pr-11 py-3 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 font-medium text-slate-900" />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 bottom-2.5 p-1 text-slate-400 hover:text-slate-700 cursor-pointer" title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
           </div>
-
-          {role === "SUPER_ADMIN" && <div className="text-[11px] text-slate-500 bg-amber-50 border border-amber-100 rounded-xl p-3">Tài khoản mẫu quản trị: <b>admin</b> / <b>admin@123456</b></div>}
 
           <button id="btn-admin-login-submit" type="submit" disabled={isLoading} className="w-full py-3.5 px-6 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.99] disabled:opacity-50">
             {isLoading ? <span>Đang xác thực...</span> : <><span>ĐĂNG NHẬP {role === "SUPER_ADMIN" ? "QUẢN TRỊ" : "GIÁO VIÊN"}</span><ArrowRight className="w-4 h-4" /></>}
