@@ -1,0 +1,49 @@
+name: Phase frontend online sync
+
+on:
+  push:
+    paths:
+      - '.github/workflows/phase-frontend-sync.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'feat: phase frontend online sync generated'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch App.tsx
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/App.tsx'); s=p.read_text(encoding='utf-8')
+          def rep(old,new,label):
+              global s
+              if old not in s: raise SystemExit(f'missing anchor: {label}')
+              s=s.replace(old,new,1)
+          rep('  // Real-time student presence tracking. Heartbeats are lightweight and never block learning.\n', '  // Load shared learning data from Neon; localStorage remains a temporary cache for offline recovery.\n  useEffect(() => {\n    let cancelled = false;\n    void storageService.loadOnlineContent().then((data) => {\n      if (cancelled) return;\n      if (data.lessons.length) setLessons(data.lessons);\n      if (data.questions.length) setQuestions(data.questions);\n      if (data.exams.length) setExams(data.exams);\n    });\n    return () => { cancelled = true; };\n  }, [studentProfile?.classId, authSession?.token]);\n\n  // Real-time student presence tracking. Heartbeats are lightweight and never block learning.\n', 'online load effect')
+          rep('  const handleUpdateLesson = (updatedLesson: Lesson) => {\n    const updated = lessons.map((l) => (l.id === updatedLesson.id ? updatedLesson : l));\n    storageService.saveLessons(updated);\n    setLessons(updated);\n  };', '  const handleUpdateLesson = (updatedLesson: Lesson) => {\n    const updated = lessons.map((l) => (l.id === updatedLesson.id ? updatedLesson : l));\n    setLessons(updated);\n    void storageService.syncLessons(updated).catch((err) => console.error("Không thể đồng bộ bài học lên Neon", err));\n  };', 'lesson update')
+          rep('  const handleBatchUpdateLessons = (updatedLessons: Lesson[]) => {\n    storageService.saveLessons(updatedLessons);\n    setLessons(updatedLessons);\n  };', '  const handleBatchUpdateLessons = (updatedLessons: Lesson[]) => {\n    setLessons(updatedLessons);\n    void storageService.syncLessons(updatedLessons).catch((err) => console.error("Không thể đồng bộ bài học lên Neon", err));\n  };', 'lesson batch')
+          rep('  const handleAddQuestion = (newQuestion: Question) => {\n    const updated = [newQuestion, ...questions];\n    storageService.saveQuestions(updated);\n    setQuestions(updated);\n  };', '  const handleAddQuestion = (newQuestion: Question) => {\n    const updated = [newQuestion, ...questions];\n    setQuestions(updated);\n    void storageService.syncQuestions([newQuestion]).catch((err) => console.error("Không thể đồng bộ câu hỏi lên Neon", err));\n  };', 'question add')
+          rep('  const handleUpdateQuestion = (updatedQuestion: Question) => {\n    const updated = questions.map((q) => (q.id === updatedQuestion.id ? updatedQuestion : q));\n    storageService.saveQuestions(updated);\n    setQuestions(updated);\n  };', '  const handleUpdateQuestion = (updatedQuestion: Question) => {\n    const updated = questions.map((q) => (q.id === updatedQuestion.id ? updatedQuestion : q));\n    setQuestions(updated);\n    void storageService.syncQuestions([updatedQuestion]).catch((err) => console.error("Không thể đồng bộ câu hỏi lên Neon", err));\n  };', 'question update')
+          rep('  const handleDeleteQuestion = (id: string) => {\n    const updated = questions.filter((q) => q.id !== id);\n    storageService.saveQuestions(updated);\n    setQuestions(updated);\n  };', '  const handleDeleteQuestion = (id: string) => {\n    const updated = questions.filter((q) => q.id !== id);\n    setQuestions(updated);\n  };', 'question delete')
+          rep('  const handleSaveExam = (exam: Exam, newQuestions?: Question[]) => {', '  const handleSaveExam = (exam: Exam, newQuestions?: Question[]) => {', 'exam handler')
+          rep('    storageService.saveExams(updated);\n    setExams(updated);', '    setExams(updated);\n    void storageService.syncExams([exam]).catch((err) => console.error("Không thể đồng bộ đề thi lên Neon", err));', 'exam sync')
+          p.write_text(s,encoding='utf-8')
+          print('frontend sync patch complete')
+          PY
+      - name: Validate and build
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          npm run lint
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/App.tsx package-lock.json
+          git diff --cached --quiet || git commit -m 'feat: phase frontend online sync generated'
+          git push
