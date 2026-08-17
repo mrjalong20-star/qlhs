@@ -4,9 +4,6 @@ let appPromise: Promise<any> | null = null;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    // The project documents the default administrator as admin/admin@123456.
-    // If those credentials are used, make them available even when an old
-    // Vercel Environment Variable contains a stale administrator value.
     const body = req.body && typeof req.body === "object" ? req.body as any : {};
     const username = String(body?.username || "").trim();
     const password = String(body?.password || "");
@@ -16,13 +13,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!appPromise) {
-      const mod = await import("../server");
+      // Explicit .ts extension is required here so Vercel's ESM bundler includes
+      // the source file instead of emitting a runtime import of /var/task/server.
+      const mod = await import("../server.ts");
       appPromise = mod.createApp();
     }
     const app = await appPromise;
 
-    // Vercel catch-all functions may receive the path without /api.
-    // Express routes in server.ts intentionally use /api/*.
     const originalUrl = String(req.url || "/");
     if (!originalUrl.startsWith("/api/")) {
       const queryIndex = originalUrl.indexOf("?");
