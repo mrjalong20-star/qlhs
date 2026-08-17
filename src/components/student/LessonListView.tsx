@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Search, BookOpen, Sparkles, Calculator } from "lucide-react";
-import { Lesson, Question, SubmissionResult, StudentProfile, Grade, Formula } from "../../types";
+import { Lesson, Question, SubmissionResult, StudentProfile, Formula } from "../../types";
 import { LessonCard } from "./LessonCard";
 import { GRADE_OPTIONS } from "../../config/appConfig";
 
@@ -16,7 +16,7 @@ export function LessonListView({ lessons, questions, submissions, student, onSta
   useEffect(() => { if (student?.grade) setSelectedGrade(student.grade); }, [student?.grade]);
   useEffect(() => {
     const grade = Number(student?.grade || selectedGrade);
-    void fetch(`/api/content/formulas?grade=${grade}`).then(r => r.json()).then(j => setQuickFormulas(j.success ? (j.data || []).slice(0, 4) : [])).catch(() => setQuickFormulas([]));
+    void fetch(`/api/formulas?grade=${grade}`).then(r => r.json()).then(j => setQuickFormulas(j.success ? (j.data || []).slice(0, 4) : [])).catch(() => setQuickFormulas([]));
   }, [student?.grade, selectedGrade]);
 
   const completedLessonIds = useMemo(() => new Set(submissions.map(s => s.lessonId)), [submissions]);
