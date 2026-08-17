@@ -18,7 +18,8 @@ export interface ApiResponse<T = any> {
 
 export const apiService = {
   /**
-   * Submit student answers
+   * Submit student answers.
+   * Neon/server is the primary source of truth; Google Apps Script is a reporting sync.
    */
   async submitQuiz(
     payload: SubmissionPayload,
@@ -27,7 +28,6 @@ export const apiService = {
     scoringConfig?: ExamScoringConfig,
     maxScore?: number
   ): Promise<ApiResponse<SubmissionResult>> {
-    // 1. Calculate score client/fallback side
     const localGraded = gradeSubmission(
       payload.answers,
       questions,
@@ -45,95 +45,54 @@ export const apiService = {
       config
     );
 
-    // Always cache locally first to guarantee zero data loss
-    storageService.saveLocalSubmission(localGraded);
     storageService.clearActiveDraft(payload.lessonId);
 
-    // 2. If Google Apps Script URL is provided, send to Apps Script
-    if (config.googleAppsScriptUrl && config.googleAppsScriptUrl.trim().startsWith("http")) {
-      try {
-        const gasPayload = {
-          action: "SUBMIT_EXAM",
-          attemptId: payload.attemptId,
-          studentName: payload.studentName,
-          className: payload.className,
-          lessonId: payload.lessonId,
-          lessonTitle: payload.lessonTitle,
-          semester: payload.semester,
-          timeSpentSeconds: payload.timeSpentSeconds,
-          answers: payload.answers,
-          questions: questions.map((q) => ({
-            id: q.id,
-            part: q.part,
-            type: q.type,
-            answer: q.answer,
-            subAnswers: q.subAnswers,
-            shortAnswer: q.shortAnswer,
-            acceptableAnswers: q.acceptableAnswers,
-            tolerance: q.tolerance,
-            explanation: q.explanation,
-            formula: q.formula,
-          })),
-        };
-
-        // Note: Google Apps Script web apps handle POST requests
-        const response = await fetch(config.googleAppsScriptUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8",
-          },
-          body: JSON.stringify(gasPayload),
-        });
-
-        if (response.ok) {
-          const resJson = await response.json();
-          if (resJson.success && resJson.data) {
-            // Merge with local detail view if needed
-            const mergedResult: SubmissionResult = {
-              ...localGraded,
-              ...resJson.data,
-              details: localGraded.details, // Keep rich interactive UI details
-            };
-            storageService.saveLocalSubmission(mergedResult);
-            return {
-              success: true,
-              message: "Đã nộp bài thành công và đồng bộ lên Google Sheets!",
-              data: mergedResult,
-            };
-          }
-        }
-      } catch (err) {
-        console.warn("Could not reach Google Apps Script, falling back to server/local store", err);
-      }
-    }
-
-    // 3. Sync with local express server backup
     try {
-      await fetch("/api/submit", {
+      const response = await fetch("/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...localGraded,
           sessionId: localStorage.getItem("geo11_student_session_id") || undefined,
           answers: payload.answers,
+          questionSnapshot: questions,
+          scoringConfig,
+          maxScore,
+          googleAppsScriptUrl: config.googleAppsScriptUrl || undefined,
         }),
       });
-    } catch (err) {
-      console.warn("Local server backup unreachable, cached in browser", err);
-    }
 
-    return {
-      success: true,
-      message: config.googleAppsScriptUrl
-        ? "Nộp bài thành công (đã lưu bộ nhớ cục bộ & máy chủ)."
-        : "Nộp bài thành công! (Kết nối Google Apps Script trong phần Giáo viên để tự động ghi Sheet).",
-      data: localGraded,
-      isOfflineMode: !config.googleAppsScriptUrl,
-    };
+      const json = await response.json().catch(() => ({}));
+      if (response.ok && json.success && json.data) {
+        const serverResult: SubmissionResult = {
+          ...localGraded,
+          ...json.data,
+          details: json.data.details || localGraded.details,
+        };
+        storageService.saveLocalSubmission(serverResult);
+        return {
+          success: true,
+          message: json.message || "Nộp bài thành công và đã lưu trên hệ thống.",
+          data: serverResult,
+          isOfflineMode: false,
+        };
+      }
+
+      throw new Error(json.message || `Máy chủ trả về HTTP ${response.status}`);
+    } catch (err) {
+      console.warn("Neon/server submission unavailable; keeping local fallback only.", err);
+      storageService.saveLocalSubmission(localGraded);
+      return {
+        success: true,
+        message: "Nộp bài đã được lưu trên thiết bị. Kết nối máy chủ để đồng bộ trực tuyến.",
+        data: localGraded,
+        isOfflineMode: true,
+      };
+    }
   },
 
   /**
-   * Test connection to Google Apps Script Web App
+   * Test connection to Google Apps Script Web App.
    */
   async testConnection(gasUrl: string): Promise<{ success: boolean; message: string; data?: any }> {
     if (!gasUrl || !gasUrl.startsWith("http")) {
@@ -154,7 +113,7 @@ export const apiService = {
         message: json.message || "Kết nối Google Apps Script thành công!",
         data: json,
       };
-    } catch (err: any) {
+    } catch {
       return {
         success: false,
         message: "Không thể kết nối đến Web App. Hãy chắc chắn bạn đã chọn quyền truy cập 'Anyone' (Bất kỳ ai) khi Deploy Apps Script.",
@@ -163,51 +122,44 @@ export const apiService = {
   },
 
   /**
-   * Fetch all submissions for a lesson
+   * Fetch all submissions for a lesson. Neon is primary; Google Sheets is a reporting fallback.
    */
   async getLessonSubmissions(lessonId: string, config: AppConfig): Promise<SubmissionResult[]> {
-    // 1. Try Google Apps Script if present
+    try {
+      const res = await fetch(`/api/submissions?lessonId=${encodeURIComponent(lessonId)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          if (json.data.length) return json.data;
+        }
+      }
+    } catch {}
+
     if (config.googleAppsScriptUrl) {
       try {
         const url = `${config.googleAppsScriptUrl}?action=getLessonResults&lessonId=${encodeURIComponent(lessonId)}&t=${Date.now()}`;
         const res = await fetch(url);
         if (res.ok) {
           const json = await res.json();
-          if (json.success && Array.isArray(json.data)) {
-            return json.data;
-          }
+          if (json.success && Array.isArray(json.data)) return json.data;
         }
       } catch (err) {
         console.warn("GAS fetch error, reading local fallback", err);
       }
     }
 
-    // 2. Fallback to server & local storage
-    try {
-      const res = await fetch(`/api/submissions?lessonId=${encodeURIComponent(lessonId)}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          return json.data;
-        }
-      }
-    } catch {}
-
-    const locals = storageService.getLocalSubmissions();
-    return locals.filter((s) => s.lessonId === lessonId);
+    return storageService.getLocalSubmissions().filter((s) => s.lessonId === lessonId);
   },
 
   /**
-   * Fetch all submissions across system
+   * Fetch all submissions across the system. Neon is primary.
    */
-  async getAllSubmissions(config: AppConfig): Promise<SubmissionResult[]> {
+  async getAllSubmissions(_config: AppConfig): Promise<SubmissionResult[]> {
     try {
       const res = await fetch("/api/submissions");
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          return json.data;
-        }
+        if (json.success && Array.isArray(json.data)) return json.data;
       }
     } catch {}
 
@@ -215,7 +167,7 @@ export const apiService = {
   },
 
   /**
-   * Compute Question Statistics
+   * Compute question statistics from the online submission source.
    */
   async getQuestionStatistics(
     questions: Question[],
@@ -235,11 +187,8 @@ export const apiService = {
             statsMap[detail.questionId] = { total: 0, correct: 0, wrong: 0 };
           }
           statsMap[detail.questionId].total++;
-          if (detail.isCorrect) {
-            statsMap[detail.questionId].correct++;
-          } else {
-            statsMap[detail.questionId].wrong++;
-          }
+          if (detail.isCorrect) statsMap[detail.questionId].correct++;
+          else statsMap[detail.questionId].wrong++;
         }
       }
     }
