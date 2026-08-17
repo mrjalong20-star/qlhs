@@ -1,0 +1,33 @@
+# Render Blueprint for "Quản lý học sinh"
+# Deploy: Web Service + PostgreSQL
+# IMPORTANT: Do NOT put real secrets here. Set them in Render dashboard Environment.
+
+services:
+  - type: web
+    name: quan-ly-hoc-sinh
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SUPER_ADMIN_USERNAME
+        sync: false
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_APPS_SCRIPT_URL
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: quan-ly-hoc-sinh-db
+          property: connectionString
+
+databases:
+  - name: quan-ly-hoc-sinh-db
+    plan: free
+    databaseName: quanlyhocsinh
+    user: quanlyhocsinh

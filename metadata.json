@@ -1,0 +1,6 @@
+{
+  "name": "Luyện Tập Địa Lí 11 - GDPT 2018",
+  "description": "Hệ thống luyện tập và kiểm tra môn Địa lí 11 Chương trình GDPT 2018 - Trường THCS & THPT Lê Lợi, tích hợp chấm điểm tự động và Google Sheets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
