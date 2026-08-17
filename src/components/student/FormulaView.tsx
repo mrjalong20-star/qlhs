@@ -7,7 +7,12 @@ export function FormulaView({ student }: { student: StudentProfile | null }) {
   const [grade, setGrade] = useState<Grade>((student?.grade || 6) as Grade);
   const [query, setQuery] = useState("");
   useEffect(() => { if (student?.grade) setGrade(student.grade); }, [student?.grade]);
-  useEffect(() => { void fetch(`/api/content/formulas?grade=${grade}`).then(r => r.json()).then(j => setFormulas(j.success ? j.data : [])).catch(() => setFormulas([])); }, [grade]);
+  useEffect(() => {
+    void fetch(`/api/formulas?grade=${grade}`)
+      .then(r => r.json())
+      .then(j => setFormulas(j.success ? (j.data || []) : []))
+      .catch(() => setFormulas([]));
+  }, [grade]);
   const visible = useMemo(() => formulas.filter(f => !query || `${f.title} ${f.chapter} ${f.formula}`.toLowerCase().includes(query.toLowerCase())), [formulas, query]);
   return <div className="space-y-6">
     <div className="bg-gradient-to-r from-indigo-700 to-sky-600 rounded-3xl p-7 text-white shadow-lg"><div className="flex items-center gap-3"><Calculator className="w-8 h-8"/><div><h1 className="text-2xl font-extrabold">Công thức Toán</h1><p className="text-sm text-indigo-100">Công thức theo khối 6–12, có ví dụ và hình minh họa.</p></div></div></div>
