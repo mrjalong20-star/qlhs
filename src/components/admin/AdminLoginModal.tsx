@@ -12,8 +12,6 @@ interface AdminLoginModalProps {
 
 type LoginRole = "TEACHER" | "SUPER_ADMIN";
 
-export function AdminLoginModalProps_unused() { return null; }
-
 export function AdminLoginModal({ isOpen, onClose, onSuccess }: AdminLoginModalProps) {
   const [role, setRole] = useState<LoginRole>("TEACHER");
   const [username, setUsername] = useState("");
