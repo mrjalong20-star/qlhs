@@ -1,0 +1,66 @@
+name: Fix Vercel Node runtime
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Apply Vercel runtime fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('server.ts')
+          s = p.read_text()
+          if 'import { Pool } from "pg";' not in s:
+              s = s.replace('import { createServer as createViteServer } from "vite";\n', 'import { createServer as createViteServer } from "vite";\nimport { Pool } from "pg";\n')
+              start = s.index('let pool: any = null;')
+              end = s.index('\n\nasync function initDatabase()', start)
+              s = s[:start] + '''let pool: Pool | null = null;\nlet dbReady: Promise<void> | null = null;\n\nfunction getPool() {\n  if (!process.env.DATABASE_URL) return null;\n  if (!pool) {\n    pool = new Pool({\n      connectionString: process.env.DATABASE_URL,\n      max: 3,\n      idleTimeoutMillis: 10000,\n      connectionTimeoutMillis: 10000,\n      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,\n    });\n  }\n  return pool;\n}''' + s[end:]
+              p.write_text(s)
+
+          p = Path('api/[...path].ts')
+          s = p.read_text()
+          s = s.replace('await import("../server.ts")', 'await import("../dist/server.js")')
+          s = s.replace('await import("../server")', 'await import("../dist/server.js")')
+          p.write_text(s)
+
+          p = Path('package.json')
+          s = p.read_text()
+          s = s.replace('"build": "vite build"', '"build": "vite build && esbuild server.ts --bundle --platform=node --format=esm --outfile=dist/server.js --packages=bundle"')
+          p.write_text(s)
+
+          p = Path('vercel.json')
+          s = p.read_text()
+          s = s.replace('["server.cjs"]', '"dist/server.js"')
+          s = s.replace('"server.cjs"', '"dist/server.js"')
+          p.write_text(s)
+          PY
+
+          npm install
+          npm run build
+
+      - name: Commit generated runtime fixes and lockfile
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server.ts api/[...path].ts package.json vercel.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "No changes needed."
+            exit 0
+          fi
+          git commit -m "fix Vercel server bundling and include pg"
+          git push
