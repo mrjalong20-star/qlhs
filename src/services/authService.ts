@@ -19,11 +19,17 @@ export const authService = {
   async login(username: string, password: string): Promise<AuthSession> {
     const res = await fetch("/api/auth/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ username, password }),
     });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json.success) throw new Error(json.message || "Đăng nhập thất bại");
+    const raw = await res.text();
+    let json: any = {};
+    try { json = raw ? JSON.parse(raw) : {}; } catch { /* non-JSON response */ }
+    if (!res.ok || !json.success) {
+      const serverMessage = json?.message || raw?.slice(0, 180);
+      throw new Error(serverMessage ? `Đăng nhập lỗi (${res.status}): ${serverMessage}` : `Đăng nhập lỗi (${res.status}).`);
+    }
+    if (!json.session?.token || !json.session?.role) throw new Error("API đăng nhập không trả về phiên hợp lệ.");
     const session = json.session as AuthSession;
     authService.save(session);
     return session;
