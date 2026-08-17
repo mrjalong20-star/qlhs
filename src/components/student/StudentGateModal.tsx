@@ -4,12 +4,13 @@ import { StudentProfile, AppConfig } from "../../types";
 
 interface StudentGateModalProps {
   isOpen: boolean;
+  onClose?: () => void;
   onSave: (profile: StudentProfile) => void;
   currentProfile: StudentProfile | null;
   config: AppConfig;
 }
 
-export function StudentGateModal({ isOpen, onSave, currentProfile }: StudentGateModalProps) {
+export function StudentGateModal({ isOpen, onClose, onSave, currentProfile }: StudentGateModalProps) {
   const [name, setName] = useState(currentProfile?.studentName || "");
   const [dateOfBirth, setDateOfBirth] = useState(currentProfile?.dateOfBirth || "");
   const [linkedClass, setLinkedClass] = useState<{ id: string; name: string; classCode?: string; teacherName: string } | null>(null);
@@ -127,6 +128,7 @@ export function StudentGateModal({ isOpen, onSave, currentProfile }: StudentGate
             <ArrowRight className="w-4 h-4" />
           </button>
 
+          {onClose && <button type="button" onClick={onClose} className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-800">Đóng</button>}
           <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 text-center pt-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /><span>Không yêu cầu mật khẩu</span></div>
         </form>
       </div>
