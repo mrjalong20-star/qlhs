@@ -1,0 +1,104 @@
+name: Phase content backend migration
+
+on:
+  push:
+    paths:
+      - '.github/workflows/phase-content.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.event.head_commit.message != 'feat: phase content backend generated'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Patch backend
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('server.ts')
+          s=p.read_text(encoding='utf-8')
+          def rep(old,new,label):
+              global s
+              if old in s: s=s.replace(old,new,1)
+              elif label not in s: raise SystemExit(f'missing anchor: {label}')
+          rep("      school_year TEXT NOT NULL DEFAULT '',\n      teacher_username TEXT NOT NULL,", "      school_year TEXT NOT NULL DEFAULT '',\n      grade INTEGER NOT NULL DEFAULT 6,\n      teacher_username TEXT NOT NULL,", 'class grade column')
+          rep("    CREATE INDEX IF NOT EXISTS app_presence_last_seen_idx ON app_presence (last_seen_ms);\n  `);", "    CREATE INDEX IF NOT EXISTS app_presence_last_seen_idx ON app_presence (last_seen_ms);\n    ALTER TABLE app_classes ADD COLUMN IF NOT EXISTS grade INTEGER NOT NULL DEFAULT 6;\n    CREATE TABLE IF NOT EXISTS app_lessons (id TEXT PRIMARY KEY, grade INTEGER NOT NULL DEFAULT 6, teacher_username TEXT NOT NULL, payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());\n    CREATE TABLE IF NOT EXISTS app_questions (id TEXT PRIMARY KEY, grade INTEGER NOT NULL DEFAULT 6, teacher_username TEXT NOT NULL, payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());\n    CREATE TABLE IF NOT EXISTS app_exams (id TEXT PRIMARY KEY, grade INTEGER NOT NULL DEFAULT 6, teacher_username TEXT NOT NULL, payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());\n    CREATE TABLE IF NOT EXISTS app_formulas (id TEXT PRIMARY KEY, grade INTEGER NOT NULL DEFAULT 6, teacher_username TEXT NOT NULL, payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());\n    CREATE TABLE IF NOT EXISTS app_progress (id TEXT PRIMARY KEY, student_id TEXT NOT NULL, lesson_id TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'NOT_STARTED', payload JSONB NOT NULL DEFAULT '{}'::jsonb, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());\n  `);", 'content tables')
+          rep("      const cleanName = String(req.body?.name || \"\").trim();\n      if (!cleanName) return res.status(400).json({ success: false, message: \"Vui lòng nhập tên lớp.\" });", "      const cleanName = String(req.body?.name || \"\").trim();\n      const grade = Number(req.body?.grade || 6);\n      if (!cleanName) return res.status(400).json({ success: false, message: \"Vui lòng nhập tên lớp.\" });\n      if (!Number.isInteger(grade) || grade < 6 || grade > 12) return res.status(400).json({ success: false, message: \"Khối phải từ 6 đến 12.\" });", 'class POST grade')
+          rep("      const record = { id, name: cleanName, classCode, schoolYear, teacherUsername: auth.username, teacherName: auth.displayName, createdAt: new Date().toISOString(), students: [] as any[] };\n      if (memoryFallback()) memory.classes.set(id, record);\n      else await query(\"INSERT INTO app_classes(id,name,class_code,school_year,teacher_username,teacher_name,students) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb)\", [id,cleanName,classCode,schoolYear,auth.username,auth.displayName,\"[]\"]);", "      const record = { id, name: cleanName, classCode, schoolYear, grade, teacherUsername: auth.username, teacherName: auth.displayName, createdAt: new Date().toISOString(), students: [] as any[] };\n      if (memoryFallback()) memory.classes.set(id, record);\n      else await query(\"INSERT INTO app_classes(id,name,class_code,school_year,grade,teacher_username,teacher_name,students) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb)\", [id,cleanName,classCode,schoolYear,grade,auth.username,auth.displayName,\"[]\"]);", 'class insert')
+          rep("SELECT id,name,class_code AS \\\"classCode\\\",school_year AS \\\"schoolYear\\\",teacher_username AS \\\"teacherUsername\\\",teacher_name AS \\\"teacherName\\\",created_at AS \\\"createdAt\\\", jsonb_array_length(students) AS \\\"studentCount\\\" FROM app_classes", "SELECT id,name,class_code AS \\\"classCode\\\",school_year AS \\\"schoolYear\\\",grade,teacher_username AS \\\"teacherUsername\\\",teacher_name AS \\\"teacherName\\\",created_at AS \\\"createdAt\\\", jsonb_array_length(students) AS \\\"studentCount\\\" FROM app_classes", 'class list select')
+          rep("SELECT id,name,class_code AS \\\"classCode\\\",school_year AS \\\"schoolYear\\\",teacher_username AS \\\"teacherUsername\\\",teacher_name AS \\\"teacherName\\\",students,created_at AS \\\"createdAt\\\" FROM app_classes WHERE id=$1", "SELECT id,name,class_code AS \\\"classCode\\\",school_year AS \\\"schoolYear\\\",grade,teacher_username AS \\\"teacherUsername\\\",teacher_name AS \\\"teacherName\\\",students,created_at AS \\\"createdAt\\\" FROM app_classes WHERE id=$1", 'getClass select')
+          rep("res.json({ success: true, data: { id: record.id, name: record.name, classCode: record.classCode, schoolYear: record.schoolYear, teacherName: record.teacherName } });", "res.json({ success: true, data: { id: record.id, name: record.name, classCode: record.classCode, schoolYear: record.schoolYear, grade: Number(record.grade || 6), teacherName: record.teacherName } });", 'class public meta')
+          rep("res.json({ success: true, sessionId, profile: { studentName: student.studentName, className: record.name, dateOfBirth: student.dateOfBirth }, classId: record.id, teacherName: record.teacherName });", "res.json({ success: true, sessionId, profile: { studentName: student.studentName, className: record.name, dateOfBirth: student.dateOfBirth, grade: Number(record.grade || 6) }, classId: record.id, teacherName: record.teacherName, grade: Number(record.grade || 6) });", 'student grade')
+          marker='  if (process.env.VERCEL) return app;'
+          if 'app.get("/api/content/lessons"' not in s:
+              block=r'''
+  async function contentList(table: string, req: express.Request, res: express.Response) {
+    try {
+      const session = await getSession(req);
+      const gradeRaw = req.query.grade ? Number(req.query.grade) : null;
+      if (table === 'app_lessons' || table === 'app_questions' || table === 'app_exams' || table === 'app_formulas') {
+        if (session) {
+          const r = await query<{payload:any; grade:number}>(`SELECT payload, grade FROM ${table} ORDER BY updated_at DESC`);
+          const data = r.rows.filter(x => !gradeRaw || Number(x.grade) === gradeRaw).map(x => ({...x.payload, grade: Number(x.grade)}));
+          return res.json({success:true,data});
+        }
+        const r = await query<{payload:any; grade:number}>(`SELECT payload, grade FROM ${table} ORDER BY updated_at DESC`);
+        const data = r.rows.filter(x => !gradeRaw || Number(x.grade) === gradeRaw).map(x => ({...x.payload, grade: Number(x.grade)}));
+        return res.json({success:true,data});
+      }
+    } catch (err:any) { return res.status(500).json({success:false,message:err.message}); }
+  }
+  function normalizeGrade(v:any){ const g=Number(v||6); return Number.isInteger(g)&&g>=6&&g<=12?g:6; }
+  async function saveContent(table:string, req:express.Request, res:express.Response){
+    try{
+      const auth=await requireRole(req,res,['TEACHER','SUPER_ADMIN']); if(!auth) return;
+      const id=String(req.body?.id||`${table}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`);
+      const grade=normalizeGrade(req.body?.grade); const payload={...req.body,id,grade};
+      await query(`INSERT INTO ${table}(id,grade,teacher_username,payload,updated_at) VALUES($1,$2,$3,$4::jsonb,NOW()) ON CONFLICT(id) DO UPDATE SET grade=EXCLUDED.grade,payload=EXCLUDED.payload,updated_at=NOW()`,[id,grade,auth.username,JSON.stringify(payload)]);
+      return res.json({success:true,data:payload});
+    }catch(err:any){return res.status(500).json({success:false,message:err.message});}
+  }
+  async function deleteContent(table:string, req:express.Request, res:express.Response){
+    try{ const auth=await requireRole(req,res,['TEACHER','SUPER_ADMIN']); if(!auth) return; await query(`DELETE FROM ${table} WHERE id=$1`,[req.params.id]); return res.json({success:true}); }catch(err:any){return res.status(500).json({success:false,message:err.message});}
+  }
+  app.get('/api/content/lessons', async (req,res)=>contentList('app_lessons',req,res));
+  app.post('/api/content/lessons', async (req,res)=>saveContent('app_lessons',req,res));
+  app.patch('/api/content/lessons/:id', async (req,res)=>saveContent('app_lessons',{...req,body:{...req.body,id:req.params.id}} as any,res));
+  app.delete('/api/content/lessons/:id', async (req,res)=>deleteContent('app_lessons',req,res));
+  app.get('/api/content/questions', async (req,res)=>contentList('app_questions',req,res));
+  app.post('/api/content/questions', async (req,res)=>saveContent('app_questions',req,res));
+  app.patch('/api/content/questions/:id', async (req,res)=>saveContent('app_questions',{...req,body:{...req.body,id:req.params.id}} as any,res));
+  app.delete('/api/content/questions/:id', async (req,res)=>deleteContent('app_questions',req,res));
+  app.get('/api/content/exams', async (req,res)=>contentList('app_exams',req,res));
+  app.post('/api/content/exams', async (req,res)=>saveContent('app_exams',req,res));
+  app.patch('/api/content/exams/:id', async (req,res)=>saveContent('app_exams',{...req,body:{...req.body,id:req.params.id}} as any,res));
+  app.delete('/api/content/exams/:id', async (req,res)=>deleteContent('app_exams',req,res));
+  app.get('/api/content/formulas', async (req,res)=>contentList('app_formulas',req,res));
+  app.post('/api/content/formulas', async (req,res)=>saveContent('app_formulas',req,res));
+  app.patch('/api/content/formulas/:id', async (req,res)=>saveContent('app_formulas',{...req,body:{...req.body,id:req.params.id}} as any,res));
+  app.delete('/api/content/formulas/:id', async (req,res)=>deleteContent('app_formulas',req,res));
+
+'''
+              s=s.replace(marker,block+marker,1)
+          p.write_text(s,encoding='utf-8')
+          print('backend patch complete')
+          PY
+      - name: Validate
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          npm run lint
+      - name: Commit generated changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add server.ts package-lock.json
+          git diff --cached --quiet || git commit -m 'feat: phase content backend generated'
+          git push
