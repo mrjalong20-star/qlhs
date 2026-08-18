@@ -3,6 +3,7 @@ import { Search, BookOpen, Sparkles, Calculator } from "lucide-react";
 import { Lesson, Question, SubmissionResult, StudentProfile, Formula } from "../../types";
 import { LessonCard } from "./LessonCard";
 import { GRADE_OPTIONS } from "../../config/appConfig";
+import { storageService } from "../../services/storageService";
 
 interface LessonListViewProps { lessons: Lesson[]; questions: Question[]; submissions: SubmissionResult[]; student: StudentProfile | null; onStartLesson: (lesson: Lesson, isRetake?: boolean) => void; onOpenStudentModal: () => void; }
 
