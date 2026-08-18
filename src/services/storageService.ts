@@ -32,6 +32,11 @@ export const storageService = {
   async syncExams(exams:Exam[]){for(const e of exams) await onlineContent<Exam>("/api/content/exams",{method:"POST",body:JSON.stringify(e)});localStorage.setItem(EXAMS_STORAGE_KEY,JSON.stringify(exams));return exams;},
   async deleteExam(id:string){await onlineContent(`/api/content/exams/${encodeURIComponent(id)}`,{method:"DELETE"});const next=this.getExams().filter((x:Exam)=>x.id!==id);localStorage.setItem(EXAMS_STORAGE_KEY,JSON.stringify(next));},
   async loadOnlineContent(){const [lessons,questions,exams]=await Promise.all([onlineContent<Lesson[]>("/api/content/lessons").catch(()=>[]),onlineContent<Question[]>("/api/content/questions").catch(()=>[]),onlineContent<Exam[]>("/api/content/exams").catch(()=>[])]);if(lessons.length)localStorage.setItem(LESSONS_STORAGE_KEY,JSON.stringify(lessons));if(questions.length)localStorage.setItem(QUESTIONS_STORAGE_KEY,JSON.stringify(questions));if(exams.length)localStorage.setItem(EXAMS_STORAGE_KEY,JSON.stringify(exams));return {lessons,questions,exams};},
+  async loadOnlineSubmissions(){
+    const remote = await onlineContent<SubmissionResult[]>("/api/submissions").catch(()=>[]);
+    if(remote.length){try{localStorage.setItem(STORAGE_KEYS.LOCAL_SUBMISSIONS,JSON.stringify(remote));}catch{}}
+    return remote;
+  },
   getAppConfig():AppConfig{try{const d=localStorage.getItem(STORAGE_KEYS.APP_CONFIG);return d?{...DEFAULT_CONFIG,...JSON.parse(d)}:DEFAULT_CONFIG;}catch{return DEFAULT_CONFIG;}},
   saveAppConfig(config:AppConfig){localStorage.setItem(STORAGE_KEYS.APP_CONFIG,JSON.stringify(config));},
   getAdminAuth(){try{return sessionStorage.getItem(STORAGE_KEYS.ADMIN_AUTH)==="authenticated";}catch{return false;}},
