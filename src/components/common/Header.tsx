@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Compass, BookOpen, FileCheck2, Trophy, Calculator, User, Lock, Menu, X, Sparkles, LogOut, Settings2 } from "lucide-react";
+import { Compass, BookOpen, FileCheck2, Trophy, Calculator, User, Lock, Menu, X, Sparkles, LogOut, Settings2, ClipboardList } from "lucide-react";
 import { StudentProfile, AppConfig } from "../../types";
 
 interface HeaderProps {
   config: AppConfig; studentProfile: StudentProfile | null;
-  currentView: "LESSONS" | "EXAMS" | "MY_RESULTS" | "FORMULAS" | "FORMULA_MANAGER" | "QUIZ" | "RESULT" | "ADMIN";
+  currentView: "LESSONS" | "EXAMS" | "MY_RESULTS" | "FORMULAS" | "FORMULA_MANAGER" | "QUIZ" | "RESULT" | "ADMIN" | "ASSIGNMENTS";
   onOpenStudentGate: () => void; onOpenAdminLogin: () => void; onStudentLogout: () => void;
-  onNavigate: (view: "LESSONS" | "EXAMS" | "MY_RESULTS" | "FORMULAS" | "FORMULA_MANAGER" | "ADMIN") => void;
+  onNavigate: (view: "LESSONS" | "EXAMS" | "MY_RESULTS" | "FORMULAS" | "FORMULA_MANAGER" | "ADMIN" | "ASSIGNMENTS") => void;
   isAdmin: boolean; authSession?: { role: "SUPER_ADMIN" | "TEACHER"; username: string; displayName: string } | null; onLogout: () => void;
   onSwitchRole?: () => void; userRole?: "TEACHER" | "STUDENT";
 }
@@ -21,6 +21,7 @@ export function Header({ config, studentProfile, currentView, onOpenStudentGate,
         <button id="nav-tab-exams" onClick={() => onNavigate("EXAMS")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "EXAMS" ? "bg-sky-50 text-sky-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><FileCheck2 className="w-4 h-4"/><span>Đề kiểm tra</span></button>
         <button id="nav-tab-formulas" onClick={() => onNavigate("FORMULAS")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "FORMULAS" ? "bg-amber-50 text-amber-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><Calculator className="w-4 h-4"/><span>Công thức</span></button>
         <button id="nav-tab-results" onClick={() => onNavigate("MY_RESULTS")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "MY_RESULTS" ? "bg-sky-50 text-sky-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><Trophy className="w-4 h-4 text-amber-500"/><span>Kết quả</span></button></>}
+        {isAdmin && <button id="nav-tab-assignments" onClick={() => onNavigate("ASSIGNMENTS")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "ASSIGNMENTS" ? "bg-amber-50 text-amber-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><ClipboardList className="w-4 h-4"/><span>Giao bài</span></button>}
         {isAdmin && <button id="nav-tab-formula-manager" onClick={() => onNavigate("FORMULA_MANAGER")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "FORMULA_MANAGER" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><Settings2 className="w-4 h-4"/><span>Quản lý công thức</span></button>}
       </nav>
       <div className="flex items-center gap-2 sm:gap-3">
@@ -36,6 +37,7 @@ export function Header({ config, studentProfile, currentView, onOpenStudentGate,
       <button onClick={() => {onNavigate("EXAMS");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><FileCheck2 className="inline w-5 h-5 mr-2 text-indigo-600"/>Đề kiểm tra</button>
       <button onClick={() => {onNavigate("FORMULAS");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><Calculator className="inline w-5 h-5 mr-2 text-amber-500"/>Công thức</button>
       <button onClick={() => {onNavigate("MY_RESULTS");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><Trophy className="inline w-5 h-5 mr-2 text-amber-500"/>Kết quả học tập</button></>}
+      {isAdmin && <button onClick={() => {onNavigate("ASSIGNMENTS");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><ClipboardList className="inline w-5 h-5 mr-2 text-amber-600"/>Giao bài tập</button>}
       {isAdmin && <button onClick={() => {onNavigate("FORMULA_MANAGER");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><Settings2 className="inline w-5 h-5 mr-2 text-indigo-600"/>Quản lý công thức</button>}
     </div>}
     </div></header>;

@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
-import { StudentProfile, AppConfig, Lesson, Question, SubmissionResult, Exam } from "./types";
+import { StudentProfile, AppConfig, Lesson, Question, SubmissionResult, Exam, Assignment } from "./types";
 import { storageService } from "./services/storageService";
 import { Header } from "./components/common/Header";
 import { Footer } from "./components/common/Footer";
 import { NetworkStatusBanner } from "./components/common/NetworkStatusBanner";
 import { RoleSelection } from "./components/common/RoleSelection";
+import { StudentClassEntry } from "./components/student/StudentClassEntry";
+import { StudentDashboard } from "./components/student/StudentDashboard";
+import { HomeworkView } from "./components/student/HomeworkView";
+import { QuizGame } from "./components/student/QuizGame";
 import { StudentGateModal } from "./components/student/StudentGateModal";
 import { LessonListView } from "./components/student/LessonListView";
 import { PracticeExamsView } from "./components/student/PracticeExamsView";
@@ -15,12 +19,14 @@ import { FormulaView } from "./components/student/FormulaView";
 import { FormulaManager } from "./components/admin/FormulaManager";
 import { AdminLoginModal } from "./components/admin/AdminLoginModal";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
+import { TeacherAssignmentPanel } from "./components/admin/TeacherAssignmentPanel";
 import { AppsScriptGuideModal } from "./components/admin/AppsScriptGuideModal";
 import { telemetryService } from "./services/telemetryService";
 import { authService } from "./services/authService";
 import { apiService } from "./services/apiService";
 
-type AppView = "LESSONS" | "EXAMS" | "MY_RESULTS" | "FORMULAS" | "FORMULA_MANAGER" | "QUIZ" | "RESULT" | "ADMIN";
+type AppView = "LESSONS" | "EXAMS" | "MY_RESULTS" | "FORMULAS" | "FORMULA_MANAGER" | "QUIZ" | "RESULT" | "ADMIN" | "ASSIGNMENTS";
+type StudentSubView = "DASHBOARD" | "HOMEWORK" | "LESSONS" | "EXAMS" | "GAME";
 type UserRole = "NONE" | "TEACHER" | "STUDENT";
 
 export default function App() {
@@ -35,7 +41,13 @@ export default function App() {
   const [submissions, setSubmissions] = useState<SubmissionResult[]>(() => storageService.getSubmissions());
   const [exams, setExams] = useState<Exam[]>(() => storageService.getExams());
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(() => storageService.getStudentProfile());
+  const [assignments, setAssignments] = useState<Assignment[]>(() => {
+    try { return JSON.parse(localStorage.getItem("qlhs_assignments") || "[]"); } catch { return []; }
+  });
   const [currentView, setCurrentView] = useState<AppView>("LESSONS");
+  const [studentSubView, setStudentSubView] = useState<StudentSubView>("DASHBOARD");
+  const [studentClassName, setStudentClassName] = useState<string | null>(() => localStorage.getItem("qlhs_student_class"));
+  const [isFirstStudentLogin, setIsFirstStudentLogin] = useState(() => !localStorage.getItem("qlhs_student_class"));
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [activeQuizQuestions, setActiveQuizQuestions] = useState<Question[]>([]);
   const [latestResult, setLatestResult] = useState<SubmissionResult | null>(null);
@@ -44,6 +56,11 @@ export default function App() {
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState(false);
   const [isGasGuideOpen, setIsGasGuideOpen] = useState(false);
+
+  const persistAssignments = (a: Assignment[]) => {
+    setAssignments(a);
+    localStorage.setItem("qlhs_assignments", JSON.stringify(a));
+  };
 
   const handleSelectRole = (selected: "TEACHER" | "STUDENT") => {
     setRole(selected);
@@ -57,7 +74,26 @@ export default function App() {
     setRole("NONE");
     localStorage.removeItem("qlhs_user_role");
     setCurrentView("LESSONS");
+    setStudentSubView("DASHBOARD");
   };
+
+  const handleStudentEnterClass = (className: string) => {
+    setStudentClassName(className);
+    localStorage.setItem("qlhs_student_class", className);
+    setStudentSubView("DASHBOARD");
+  };
+
+  const handleStudentExitClass = () => {
+    setStudentClassName(null);
+    localStorage.removeItem("qlhs_student_class");
+    setStudentSubView("DASHBOARD");
+  };
+
+  // Fetch assignments from API (simulated with localStorage for now)
+  useEffect(() => {
+    // In a real app, fetch assignments from API based on studentClassName
+    // For now, assignments are stored in localStorage by the teacher
+  }, [studentClassName]);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,7 +147,7 @@ export default function App() {
   const startQuizSession = (lesson: Lesson, customQuestions?: Question[], isRetake = false) => { if (!studentProfile) { setPendingLessonToStart({ lesson, questions: customQuestions, isRetake }); setIsStudentModalOpen(true); return; } const quizQuestions = customQuestions || questions.filter(q => q.lessonId === lesson.id); if (!quizQuestions.length) { alert(`Bài học "${lesson.title}" hiện chưa có câu hỏi nào trong ngân hàng.`); return; } if (isRetake) storageService.clearActiveDraft(lesson.id); setIsActiveLessonRetake(isRetake); setActiveLesson(lesson); setActiveQuizQuestions(quizQuestions); setCurrentView("QUIZ"); window.scrollTo({top:0,behavior:"smooth"}); };
   const handleFinishQuiz = (result: SubmissionResult) => { setLatestResult(result); setSubmissions(prev => { const next=[result,...prev.filter(x=>x.attemptId!==result.attemptId)]; return next; }); setCurrentView("RESULT"); window.scrollTo({top:0,behavior:"smooth"}); };
   const handleNavigate = (view: AppView) => {
-    if (view === "ADMIN" || view === "FORMULA_MANAGER") {
+    if (view === "ADMIN" || view === "FORMULA_MANAGER" || view === "ASSIGNMENTS") {
       if (!isAdminAuthenticated) { setIsAdminLoginModalOpen(true); return; }
       setCurrentView(view);
     } else setCurrentView(view);
@@ -131,6 +167,20 @@ export default function App() {
   const handleRestoreBackup=(data:{questions:Question[];lessons:Lesson[];config:AppConfig})=>{setQuestions(data.questions);setLessons(data.lessons);setConfig(data.config);void storageService.syncQuestions(data.questions);void storageService.syncLessons(data.lessons);};
   const handleResetFactory=()=>{storageService.resetToInitialSeed();setConfig(storageService.getAppConfig());setLessons(storageService.getLessons());setQuestions(storageService.getQuestions());setExams(storageService.getExams());setSubmissions(storageService.getSubmissions());};
   const handleAdminLogout=async()=>{await authService.logout();setAuthSession(null);setCurrentView("LESSONS");};
+
+  // Get unique class names from classes API
+  const [classNames, setClassNames] = useState<string[]>([]);
+  useEffect(() => {
+    if (!isAdminAuthenticated) return;
+    fetch("/api/classes")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && Array.isArray(j.data)) {
+          setClassNames(j.data.map((c: any) => c.name || c.className).filter(Boolean));
+        }
+      })
+      .catch(() => {});
+  }, [isAdminAuthenticated]);
 
   // ─── Role Selection Screen ─────────────────────────────────────────────
   if (role === "NONE") {
@@ -186,6 +236,17 @@ export default function App() {
               role={authSession?.role || "TEACHER"}
             />
           )}
+          {currentView === "ASSIGNMENTS" && isAdminAuthenticated && (
+            <TeacherAssignmentPanel
+              lessons={lessons}
+              assignments={assignments}
+              classNames={classNames.length > 0 ? classNames : ["Chưa có lớp"]}
+              submissions={submissions}
+              authSession={authSession}
+              onSaveAssignment={(a) => persistAssignments([...assignments.filter((x) => x.className !== a.className), a])}
+              onDeleteAssignment={(id) => persistAssignments(assignments.filter((a) => a.id !== id))}
+            />
+          )}
           {currentView === "FORMULA_MANAGER" && isAdminAuthenticated && <FormulaManager />}
           {currentView === "LESSONS" && !isAdminAuthenticated && (
             <div className="text-center py-20">
@@ -212,6 +273,22 @@ export default function App() {
   }
 
   // ─── Student Interface ──────────────────────────────────────────────────
+
+  // Step 1: Enter class name
+  if (!studentClassName) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <NetworkStatusBanner />
+        <StudentClassEntry
+          config={config}
+          onEnter={handleStudentEnterClass}
+          onSwitchRole={handleSwitchRole}
+        />
+      </div>
+    );
+  }
+
+  // Step 2+: Dashboard or specific section
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <NetworkStatusBanner />
@@ -220,9 +297,20 @@ export default function App() {
         studentProfile={studentProfile}
         currentView={currentView}
         onOpenStudentGate={() => setIsStudentModalOpen(true)}
-        onStudentLogout={() => { storageService.clearStudentProfile(); localStorage.removeItem("geo11_student_session_id"); setStudentProfile(null); setCurrentView("LESSONS"); }}
+        onStudentLogout={() => {
+          storageService.clearStudentProfile();
+          localStorage.removeItem("geo11_student_session_id");
+          setStudentProfile(null);
+          setCurrentView("LESSONS");
+          setStudentSubView("DASHBOARD");
+        }}
         onOpenAdminLogin={() => {}}
-        onNavigate={handleNavigate}
+        onNavigate={(v) => {
+          setCurrentView(v);
+          if (["LESSONS", "EXAMS", "MY_RESULTS", "FORMULAS"].includes(v)) {
+            setStudentSubView(v === "LESSONS" ? "LESSONS" : v === "EXAMS" ? "EXAMS" : "DASHBOARD");
+          }
+        }}
         isAdmin={false}
         authSession={null}
         onLogout={() => {}}
@@ -230,12 +318,77 @@ export default function App() {
         userRole="STUDENT"
       />
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
-        {currentView === "LESSONS" && <LessonListView lessons={lessons} questions={questions} submissions={submissions} student={studentProfile} onStartLesson={(lesson, retake) => startQuizSession(lesson, undefined, retake)} onOpenStudentModal={() => setIsStudentModalOpen(true)} />}
-        {currentView === "EXAMS" && <PracticeExamsView exams={exams} questions={questions} student={studentProfile} isAdmin={false} onStartExam={(lesson, qs) => startQuizSession(lesson, qs, true)} onOpenStudentModal={() => setIsStudentModalOpen(true)} onOpenAdminExamManager={() => {}} />}
-        {currentView === "MY_RESULTS" && <MyResultsView student={studentProfile} lessons={lessons} submissions={submissions} onRetakeLesson={lesson => startQuizSession(lesson, undefined, true)} onOpenStudentModal={() => setIsStudentModalOpen(true)} />}
-        {currentView === "FORMULAS" && <FormulaView student={studentProfile} />}
-        {currentView === "QUIZ" && activeLesson && <QuizRunner lesson={activeLesson} questions={activeQuizQuestions} student={studentProfile || { studentName: "Học sinh", className: "", dateOfBirth: "", grade: 6 }} config={config} isRetake={isActiveLessonRetake} onFinishQuiz={handleFinishQuiz} onCancelQuiz={() => setCurrentView("LESSONS")} />}
-        {currentView === "RESULT" && latestResult && <QuizResultView result={latestResult} lesson={lessons.find(l => l.id === latestResult.lessonId)} questions={questions} onRetake={() => { const l = lessons.find(x => x.id === latestResult.lessonId); if (l) startQuizSession(l, activeQuizQuestions, true); }} onBackToLessons={() => setCurrentView("LESSONS")} onGoToMyResults={() => setCurrentView("MY_RESULTS")} />}
+
+        {/* Quiz / Result views take over completely */}
+        {currentView === "QUIZ" && activeLesson && (
+          <QuizRunner lesson={activeLesson} questions={activeQuizQuestions} student={studentProfile || { studentName: "Học sinh", className: studentClassName, dateOfBirth: "", grade: 6 }} config={config} isRetake={isActiveLessonRetake} onFinishQuiz={handleFinishQuiz} onCancelQuiz={() => { setCurrentView("LESSONS"); setStudentSubView("DASHBOARD"); }} />
+        )}
+        {currentView === "RESULT" && latestResult && (
+          <QuizResultView result={latestResult} lesson={lessons.find(l => l.id === latestResult.lessonId)} questions={questions} onRetake={() => { const l = lessons.find(x => x.id === latestResult.lessonId); if (l) startQuizSession(l, activeQuizQuestions, true); }} onBackToLessons={() => { setCurrentView("LESSONS"); setStudentSubView("DASHBOARD"); }} onGoToMyResults={() => { setCurrentView("MY_RESULTS"); setStudentSubView("DASHBOARD"); }} />
+        )}
+
+        {/* Dashboard or section views */}
+        {currentView !== "QUIZ" && currentView !== "RESULT" && studentSubView === "DASHBOARD" && (            <StudentDashboard
+              className={studentClassName}
+              studentName={studentProfile?.studentName || "Học sinh"}
+              grade={studentProfile?.grade}
+              assignments={assignments}
+              lessons={lessons}
+              exams={exams}
+              submissions={submissions}
+              isFirstLogin={isFirstStudentLogin}
+              onSelectSection={(section) => {
+              setStudentSubView(section);
+              setCurrentView(section === "HOMEWORK" ? "LESSONS" : section === "LESSONS" ? "LESSONS" : "EXAMS");
+            }}
+          />
+        )}
+
+        {currentView !== "QUIZ" && currentView !== "RESULT" && studentSubView === "HOMEWORK" && (
+          <HomeworkView
+            assignment={assignments.find((a) => a.className === studentClassName) || null}
+            lessons={lessons}
+            questions={questions}
+            submissions={submissions}
+            onStartLesson={(lesson) => startQuizSession(lesson)}
+            onBack={() => setStudentSubView("DASHBOARD")}
+          />
+        )}
+
+        {currentView !== "QUIZ" && currentView !== "RESULT" && studentSubView === "LESSONS" && (
+          <>
+            <button onClick={() => setStudentSubView("DASHBOARD")} className="mb-4 text-sm font-semibold text-sky-600 hover:text-sky-800">← Quay lại bảng điều khiển</button>
+            <LessonListView lessons={lessons} questions={questions} submissions={submissions} student={studentProfile || { studentName: "Học sinh", className: studentClassName, dateOfBirth: "", grade: 6 }} onStartLesson={(lesson, retake) => startQuizSession(lesson, undefined, retake)} onOpenStudentModal={() => setIsStudentModalOpen(true)} />
+          </>
+        )}
+
+        {currentView !== "QUIZ" && currentView !== "RESULT" && studentSubView === "EXAMS" && (
+          <>
+            <button onClick={() => setStudentSubView("DASHBOARD")} className="mb-4 text-sm font-semibold text-indigo-600 hover:text-indigo-800">← Quay lại bảng điều khiển</button>
+            <PracticeExamsView exams={exams} questions={questions} student={studentProfile || { studentName: "Học sinh", className: studentClassName, dateOfBirth: "", grade: 6 }} isAdmin={false} onStartExam={(lesson, qs) => startQuizSession(lesson, qs, true)} onOpenStudentModal={() => setIsStudentModalOpen(true)} onOpenAdminExamManager={() => {}} />
+          </>
+        )}
+
+        {currentView !== "QUIZ" && currentView !== "RESULT" && studentSubView === "GAME" && (
+          <>
+            <button onClick={() => setStudentSubView("DASHBOARD")} className="mb-4 text-sm font-semibold text-purple-600 hover:text-purple-800">← Quay lại bảng điều khiển</button>
+            <QuizGame lessons={lessons} questions={questions} completedLessonIds={new Set(submissions.map(s => s.lessonId))} onSelectLesson={(lesson) => startQuizSession(lesson)} />
+          </>
+        )}
+
+        {currentView === "MY_RESULTS" && (
+          <>
+            <button onClick={() => { setCurrentView("LESSONS"); setStudentSubView("DASHBOARD"); }} className="mb-4 text-sm font-semibold text-sky-600 hover:text-sky-800">← Quay lại bảng điều khiển</button>
+            <MyResultsView student={studentProfile} lessons={lessons} submissions={submissions} onRetakeLesson={lesson => startQuizSession(lesson, undefined, true)} onOpenStudentModal={() => setIsStudentModalOpen(true)} />
+          </>
+        )}
+
+        {currentView === "FORMULAS" && (
+          <>
+            <button onClick={() => { setCurrentView("LESSONS"); setStudentSubView("DASHBOARD"); }} className="mb-4 text-sm font-semibold text-amber-600 hover:text-amber-800">← Quay lại bảng điều khiển</button>
+            <FormulaView student={studentProfile} />
+          </>
+        )}
       </main>
       <Footer config={config} onOpenTeacherAdmin={() => {}} />
       <StudentGateModal isOpen={isStudentModalOpen} onClose={() => setIsStudentModalOpen(false)} onSave={handleSaveStudentProfile} currentProfile={studentProfile} config={config} />

@@ -34,7 +34,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const result = g === null
         ? await db().query("SELECT payload FROM app_formulas ORDER BY grade, created_at")
         : await db().query("SELECT payload FROM app_formulas WHERE grade=$1 ORDER BY created_at", [g]);
-      return res.status(200).json({ success: true, data: result.rows.map((r: any) => r.payload) });
+      const dbData = result.rows.map((r: any) => r.payload);
+      // If DB is empty, return seed formulas
+      if (dbData.length === 0) {
+        const { ALL_SEED_FORMULAS } = await import("../src/data/formulas");
+        const filtered = g === null ? ALL_SEED_FORMULAS : ALL_SEED_FORMULAS.filter((f: any) => Number(f.grade) === g);
+        return res.status(200).json({ success: true, data: filtered });
+      }
+      return res.status(200).json({ success: true, data: dbData });
     }
 
     const current = await session(req);

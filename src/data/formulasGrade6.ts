@@ -1,0 +1,26 @@
+import { Formula } from "../types";
+
+export const FORMULAS_GRADE_6: Formula[] = [
+  { id: "f6_01", grade: 6, chapter: "Tập hợp số tự nhiên", title: "Phép cộng số tự nhiên", formula: "a + b = b + a (tính chất giao hoán)", explanation: "Thứ tự cộng không ảnh hưởng kết quả", example: "3 + 5 = 5 + 3 = 8", order: 1, published: true },
+  { id: "f6_02", grade: 6, chapter: "Tập hợp số tự nhiên", title: "Phép nhân số tự nhiên", formula: "a × b = b × a", explanation: "Tính chất giao hoán của phép nhân", example: "4 × 7 = 7 × 4 = 28", order: 2, published: true },
+  { id: "f6_03", grade: 6, chapter: "Tập hợp số tự nhiên", title: "Thứ tự thực hiện phép tính", formula: "( ) trước [ ] trước { }", explanation: "Thực hiện phép tính trong ngoặc trước", example: "2 × (3 + 4) = 2 × 7 = 14", order: 3, published: true },
+  { id: "f6_04", grade: 6, chapter: "Tập hợp số tự nhiên", title: "Lũy thừa", formula: "a^n = a × a × ... × a (n thừa số)", explanation: "a là cơ sở, n là số mũ", example: "2³ = 2 × 2 × 2 = 8", order: 4, published: true },
+  { id: "f6_05", grade: 6, chapter: "Tính chia hết", title: "Dấu hiệu chia hết cho 2", formula: "Số chia hết cho 2 nếu chữ số cuối cùng chẵn", explanation: "0, 2, 4, 6, 8 là số chẵn", example: "346 chia hết cho 2 (6 là số chẵn)", order: 5, published: true },
+  { id: "f6_06", grade: 6, chapter: "Tính chia hết", title: "Dấu hiệu chia hết cho 3", formula: "Số chia hết cho 3 nếu tổng các chữ số chia hết cho 3", explanation: "Cộng tất cả chữ số lại, kiểm tra chia hết cho 3", example: "357: 3+5+7=15, 15 chia hết 3 → 357 chia hết 3", order: 6, published: true },
+  { id: "f6_07", grade: 6, chapter: "Tính chia hết", title: "Dấu hiệu chia hết cho 5", formula: "Số chia hết cho 5 nếu chữ số cuối cùng là 0 hoặc 5", explanation: "", example: "485 chia hết cho 5 (5 là chữ số cuối)", order: 7, published: true },
+  { id: "f6_08", grade: 6, chapter: "Tính chia hết", title: "Ước chung lớn nhất (ƯCLN)", formula: "ƯCLN(a, b) = tích các thừa số nguyên tố chung ở số mũ nhỏ nhất", explanation: "Phân tích 2 số, lấy thừa số chung", example: "ƯCLN(12,18): 12=2²×3, 18=2×3² → ƯCLN=2×3=6", order: 8, published: true },
+  { id: "f6_09", grade: 6, chapter: "Tính chia hết", title: "Bội chung nhỏ nhất (BCNN)", formula: "BCNN(a,b) = tích các thừa số nguyên tố ở số mũ lớn nhất", explanation: "Phân tích 2 số, lấy thừa số lớn nhất", example: "BCNN(12,18)=2²×3²=36", order: 9, published: true },
+  { id: "f6_10", grade: 6, chapter: "Số nguyên", title: "Phép cộng số nguyên", formula: "(-a) + (-b) = -(a+b)", explanation: "Cộng 2 số âm thì lấy dấu trừ, cộng 2 số", example: "(-3) + (-5) = -(3+5) = -8", order: 10, published: true },
+  { id: "f6_11", grade: 6, chapter: "Số nguyên", title: "Phép trừ số nguyên", formula: "a - b = a + (-b)", explanation: "Trừ đi là cộng với đối", example: "5 - (-3) = 5 + 3 = 8", order: 11, published: true },
+  { id: "f6_12", grade: 6, chapter: "Hình phẳng", title: "Diện tích hình chữ nhật", formula: "S = a × b", explanation: "a = chiều dài, b = chiều rộng", example: "a=5cm, b=3cm → S=15cm²", order: 12, published: true },
+  { id: "f6_13", grade: 6, chapter: "Hình phẳng", title: "Diện tích hình tam giác", formula: "S = (a × h) / 2", explanation: "a = đáy, h = chiều cao tương ứng", example: "a=6cm, h=4cm → S=12cm²", order: 13, published: true },
+  { id: "f6_14", grade: 6, chapter: "Hình phẳng", title: "Diện tích hình bình hành", formula: "S = a × h", explanation: "a = đáy, h = chiều cao", example: "a=8cm, h=5cm → S=40cm²", order: 14, published: true },
+  { id: "f6_15", grade: 6, chapter: "Hình phẳng", title: "Diện tích hình thang", formula: "S = (a + b) × h / 2", explanation: "a, b = hai đáy song song, h = chiều cao", example: "a=6, b=4, h=5 → S=25", order: 15, published: true },
+  { id: "f6_16", grade: 6, chapter: "Phân số", title: "Phân số", formula: "a/b (b ≠ 0)", explanation: "a = tử số, b = mẫu số", example: "3/5: tử=3, mẫu=5", order: 16, published: true },
+  { id: "f6_17", grade: 6, chapter: "Phân số", title: "Cộng phân số cùng mẫu", formula: "a/c ± b/c = (a ± b)/c", explanation: "Cùng mẫu số thì cộng/trừ tử số", example: "2/7 + 3/7 = 5/7", order: 17, published: true },
+  { id: "f6_18", grade: 6, chapter: "Phân số", title: "Cộng phân số khác mẫu", formula: "a/b ± c/d = (ad ± bc)/(bd)", explanation: "Đưa về cùng mẫu trước", example: "1/3 + 1/4 = (4+3)/12 = 7/12", order: 18, published: true },
+  { id: "f6_19", grade: 6, chapter: "Phân số", title: "Nhân phân số", formula: "(a/b) × (c/d) = (a×c)/(b×d)", explanation: "Nhân tử với tử, mẫu với mẫu", example: "2/3 × 4/5 = 8/15", order: 19, published: true },
+  { id: "f6_20", grade: 6, chapter: "Phân số", title: "Chia phân số", formula: "(a/b) ÷ (c/d) = (a/b) × (d/c)", explanation: "Nhân với nghịch đảo", example: "3/4 ÷ 2/5 = 3/4 × 5/2 = 15/8", order: 20, published: true },
+  { id: "f6_21", grade: 6, chapter: "Số thập phân", title: "Phép tính thập phân", formula: "a,b + c,d = (a+c),(b+d)", explanation: "Cộng như số tự nhiên, giữ dấu phẩy", example: "3,5 + 2,1 = 5,6", order: 21, published: true },
+  { id: "f6_22", grade: 6, chapter: "Hình học cơ bản", title: "Độ dài đoạn thẳng", formula: "AB = |x_B - x_A| (trên trục số)", explanation: "Lấy hiệu tọa độ, lấy tuyệt đối", example: "A(2), B(7) → AB=5", order: 22, published: true },
+];

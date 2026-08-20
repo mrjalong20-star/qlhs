@@ -11,15 +11,12 @@ export function Footer({ config, onOpenTeacherAdmin, onOpenGasGuide }: FooterPro
   return (
     <footer id="main-footer" className="bg-slate-900 text-slate-400 py-10 mt-16 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-2.5 text-white font-bold text-lg mb-3">
               <GraduationCap className="w-6 h-6 text-sky-400" />
               <span>{config.subject} • GDPT 2018</span>
             </div>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              Hệ thống luyện tập và đánh giá năng lực môn Toán 11 theo Chương trình Giáo dục phổ thông 2018. Tối ưu cho mọi thiết bị học tập.
-            </p>
             <p className="text-xs text-slate-500 mt-2 font-medium">
               Năm học {config.schoolYear}
             </p>
