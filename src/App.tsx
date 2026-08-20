@@ -4,6 +4,7 @@ import { storageService } from "./services/storageService";
 import { Header } from "./components/common/Header";
 import { Footer } from "./components/common/Footer";
 import { NetworkStatusBanner } from "./components/common/NetworkStatusBanner";
+import { RoleSelection } from "./components/common/RoleSelection";
 import { StudentGateModal } from "./components/student/StudentGateModal";
 import { LessonListView } from "./components/student/LessonListView";
 import { PracticeExamsView } from "./components/student/PracticeExamsView";
@@ -20,8 +21,14 @@ import { authService } from "./services/authService";
 import { apiService } from "./services/apiService";
 
 type AppView = "LESSONS" | "EXAMS" | "MY_RESULTS" | "FORMULAS" | "FORMULA_MANAGER" | "QUIZ" | "RESULT" | "ADMIN";
+type UserRole = "NONE" | "TEACHER" | "STUDENT";
 
 export default function App() {
+  const [role, setRole] = useState<UserRole>(() => {
+    const saved = localStorage.getItem("qlhs_user_role");
+    if (saved === "TEACHER" || saved === "STUDENT") return saved;
+    return "NONE";
+  });
   const [config, setConfig] = useState<AppConfig>(() => storageService.getAppConfig());
   const [lessons, setLessons] = useState<Lesson[]>(() => storageService.getLessons());
   const [questions, setQuestions] = useState<Question[]>(() => storageService.getQuestions());
@@ -37,6 +44,20 @@ export default function App() {
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState(false);
   const [isGasGuideOpen, setIsGasGuideOpen] = useState(false);
+
+  const handleSelectRole = (selected: "TEACHER" | "STUDENT") => {
+    setRole(selected);
+    localStorage.setItem("qlhs_user_role", selected);
+    if (selected === "TEACHER") {
+      setIsAdminLoginModalOpen(true);
+    }
+  };
+
+  const handleSwitchRole = () => {
+    setRole("NONE");
+    localStorage.removeItem("qlhs_user_role");
+    setCurrentView("LESSONS");
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +132,113 @@ export default function App() {
   const handleResetFactory=()=>{storageService.resetToInitialSeed();setConfig(storageService.getAppConfig());setLessons(storageService.getLessons());setQuestions(storageService.getQuestions());setExams(storageService.getExams());setSubmissions(storageService.getSubmissions());};
   const handleAdminLogout=async()=>{await authService.logout();setAuthSession(null);setCurrentView("LESSONS");};
 
-  return <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900"><NetworkStatusBanner/><Header config={config} studentProfile={studentProfile} currentView={currentView} onOpenStudentGate={()=>setIsStudentModalOpen(true)} onStudentLogout={()=>{storageService.clearStudentProfile();localStorage.removeItem("geo11_student_session_id");setStudentProfile(null);setCurrentView("LESSONS");}} onOpenAdminLogin={()=>isAdminAuthenticated?setCurrentView("ADMIN"):setIsAdminLoginModalOpen(true)} onNavigate={handleNavigate} isAdmin={isAdminAuthenticated} authSession={authSession} onLogout={handleAdminLogout}/><main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
-    {currentView==="LESSONS"&&<LessonListView lessons={lessons} questions={questions} submissions={submissions} student={studentProfile} onStartLesson={(lesson,retake)=>startQuizSession(lesson,undefined,retake)} onOpenStudentModal={()=>setIsStudentModalOpen(true)}/>} {currentView==="EXAMS"&&<PracticeExamsView exams={exams} questions={questions} student={studentProfile} isAdmin={isAdminAuthenticated} onStartExam={(lesson,qs)=>startQuizSession(lesson,qs,true)} onOpenStudentModal={()=>setIsStudentModalOpen(true)} onOpenAdminExamManager={()=>setCurrentView("ADMIN")}/>} {currentView==="MY_RESULTS"&&<MyResultsView student={studentProfile} lessons={lessons} submissions={submissions} onRetakeLesson={lesson=>startQuizSession(lesson,undefined,true)} onOpenStudentModal={()=>setIsStudentModalOpen(true)}/>} {currentView==="FORMULAS"&&<FormulaView student={studentProfile}/>} {currentView==="FORMULA_MANAGER"&&<FormulaManager/>} {currentView==="QUIZ"&&activeLesson&&<QuizRunner lesson={activeLesson} questions={activeQuizQuestions} student={studentProfile||{studentName:"Học sinh",className:"",dateOfBirth:"",grade:6}} config={config} isRetake={isActiveLessonRetake} onFinishQuiz={handleFinishQuiz} onCancelQuiz={()=>setCurrentView("LESSONS")}/>} {currentView==="RESULT"&&latestResult&&<QuizResultView result={latestResult} lesson={lessons.find(l=>l.id===latestResult.lessonId)} questions={questions} onRetake={()=>{const l=lessons.find(x=>x.id===latestResult.lessonId);if(l)startQuizSession(l,activeQuizQuestions,true);}} onBackToLessons={()=>setCurrentView("LESSONS")} onGoToMyResults={()=>setCurrentView("MY_RESULTS")}/>} {currentView==="ADMIN"&&<AdminDashboard questions={questions} lessons={lessons} exams={exams} submissions={submissions} config={config} onUpdateLesson={handleUpdateLesson} onBatchUpdateLessons={handleBatchUpdateLessons} onAddQuestion={handleAddQuestion} onUpdateQuestion={handleUpdateQuestion} onDeleteQuestion={handleDeleteQuestion} onBulkImportQuestions={handleBulkImportQuestions} onSaveExam={handleSaveExam} onDeleteExam={handleDeleteExam} onToggleLockExam={handleToggleLockExam} onPreviewExam={handlePreviewExam} onSaveConfig={handleSaveConfig} onRestoreBackup={handleRestoreBackup} onResetFactory={handleResetFactory} onLogout={handleAdminLogout} role={authSession?.role||"TEACHER"}/>} </main><Footer config={config} onOpenTeacherAdmin={()=>isAdminAuthenticated?setCurrentView("ADMIN"):setIsAdminLoginModalOpen(true)} onOpenGasGuide={()=>setIsGasGuideOpen(true)} /><StudentGateModal isOpen={isStudentModalOpen} onClose={()=>setIsStudentModalOpen(false)} onSave={handleSaveStudentProfile} currentProfile={studentProfile} config={config}/><AdminLoginModal isOpen={isAdminLoginModalOpen} onClose={()=>setIsAdminLoginModalOpen(false)} onSuccess={()=>{setAuthSession(authService.get());setCurrentView("ADMIN");}} config={config}/><AppsScriptGuideModal isOpen={isGasGuideOpen} onClose={()=>setIsGasGuideOpen(false)} config={config} onSaveGasUrl={url=>handleSaveConfig({...config,googleAppsScriptUrl:url})}/></div>;
+  // ─── Role Selection Screen ─────────────────────────────────────────────
+  if (role === "NONE") {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <NetworkStatusBanner />
+        <RoleSelection config={config} onSelectRole={handleSelectRole} />
+      </div>
+    );
+  }
+
+  // ─── Teacher Interface ──────────────────────────────────────────────────
+  if (role === "TEACHER") {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+        <NetworkStatusBanner />
+        <Header
+          config={config}
+          studentProfile={null}
+          currentView={currentView}
+          onOpenStudentGate={() => {}}
+          onStudentLogout={() => {}}
+          onOpenAdminLogin={() => isAdminAuthenticated ? setCurrentView("ADMIN") : setIsAdminLoginModalOpen(true)}
+          onNavigate={handleNavigate}
+          isAdmin={isAdminAuthenticated}
+          authSession={authSession}
+          onLogout={handleAdminLogout}
+          onSwitchRole={handleSwitchRole}
+          userRole="TEACHER"
+        />
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
+          {currentView === "ADMIN" && isAdminAuthenticated && (
+            <AdminDashboard
+              questions={questions}
+              lessons={lessons}
+              exams={exams}
+              submissions={submissions}
+              config={config}
+              onUpdateLesson={handleUpdateLesson}
+              onBatchUpdateLessons={handleBatchUpdateLessons}
+              onAddQuestion={handleAddQuestion}
+              onUpdateQuestion={handleUpdateQuestion}
+              onDeleteQuestion={handleDeleteQuestion}
+              onBulkImportQuestions={handleBulkImportQuestions}
+              onSaveExam={handleSaveExam}
+              onDeleteExam={handleDeleteExam}
+              onToggleLockExam={handleToggleLockExam}
+              onPreviewExam={handlePreviewExam}
+              onSaveConfig={handleSaveConfig}
+              onRestoreBackup={handleRestoreBackup}
+              onResetFactory={handleResetFactory}
+              onLogout={handleAdminLogout}
+              role={authSession?.role || "TEACHER"}
+            />
+          )}
+          {currentView === "FORMULA_MANAGER" && isAdminAuthenticated && <FormulaManager />}
+          {currentView === "LESSONS" && !isAdminAuthenticated && (
+            <div className="text-center py-20">
+              <p className="text-slate-500 text-sm">Vui lòng đăng nhập để truy cập khu vực quản trị.</p>
+            </div>
+          )}
+          {currentView === "LESSONS" && isAdminAuthenticated && (
+            <div className="text-center py-20">
+              <p className="text-slate-600 text-lg font-semibold">Chào mừng Giáo viên!</p>
+              <p className="text-slate-500 text-sm mt-2">Sử dụng menu quản trị để quản lý lớp học và đề thi.</p>
+            </div>
+          )}
+        </main>
+        <Footer config={config} onOpenTeacherAdmin={() => isAdminAuthenticated ? setCurrentView("ADMIN") : setIsAdminLoginModalOpen(true)} onOpenGasGuide={() => setIsGasGuideOpen(true)} />
+        <AdminLoginModal
+          isOpen={isAdminLoginModalOpen}
+          onClose={() => setIsAdminLoginModalOpen(false)}
+          onSuccess={() => { setAuthSession(authService.get()); setCurrentView("ADMIN"); }}
+          config={config}
+        />
+        <AppsScriptGuideModal isOpen={isGasGuideOpen} onClose={() => setIsGasGuideOpen(false)} config={config} onSaveGasUrl={url => handleSaveConfig({ ...config, googleAppsScriptUrl: url })} />
+      </div>
+    );
+  }
+
+  // ─── Student Interface ──────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+      <NetworkStatusBanner />
+      <Header
+        config={config}
+        studentProfile={studentProfile}
+        currentView={currentView}
+        onOpenStudentGate={() => setIsStudentModalOpen(true)}
+        onStudentLogout={() => { storageService.clearStudentProfile(); localStorage.removeItem("geo11_student_session_id"); setStudentProfile(null); setCurrentView("LESSONS"); }}
+        onOpenAdminLogin={() => {}}
+        onNavigate={handleNavigate}
+        isAdmin={false}
+        authSession={null}
+        onLogout={() => {}}
+        onSwitchRole={handleSwitchRole}
+        userRole="STUDENT"
+      />
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
+        {currentView === "LESSONS" && <LessonListView lessons={lessons} questions={questions} submissions={submissions} student={studentProfile} onStartLesson={(lesson, retake) => startQuizSession(lesson, undefined, retake)} onOpenStudentModal={() => setIsStudentModalOpen(true)} />}
+        {currentView === "EXAMS" && <PracticeExamsView exams={exams} questions={questions} student={studentProfile} isAdmin={false} onStartExam={(lesson, qs) => startQuizSession(lesson, qs, true)} onOpenStudentModal={() => setIsStudentModalOpen(true)} onOpenAdminExamManager={() => {}} />}
+        {currentView === "MY_RESULTS" && <MyResultsView student={studentProfile} lessons={lessons} submissions={submissions} onRetakeLesson={lesson => startQuizSession(lesson, undefined, true)} onOpenStudentModal={() => setIsStudentModalOpen(true)} />}
+        {currentView === "FORMULAS" && <FormulaView student={studentProfile} />}
+        {currentView === "QUIZ" && activeLesson && <QuizRunner lesson={activeLesson} questions={activeQuizQuestions} student={studentProfile || { studentName: "Học sinh", className: "", dateOfBirth: "", grade: 6 }} config={config} isRetake={isActiveLessonRetake} onFinishQuiz={handleFinishQuiz} onCancelQuiz={() => setCurrentView("LESSONS")} />}
+        {currentView === "RESULT" && latestResult && <QuizResultView result={latestResult} lesson={lessons.find(l => l.id === latestResult.lessonId)} questions={questions} onRetake={() => { const l = lessons.find(x => x.id === latestResult.lessonId); if (l) startQuizSession(l, activeQuizQuestions, true); }} onBackToLessons={() => setCurrentView("LESSONS")} onGoToMyResults={() => setCurrentView("MY_RESULTS")} />}
+      </main>
+      <Footer config={config} onOpenTeacherAdmin={() => {}} />
+      <StudentGateModal isOpen={isStudentModalOpen} onClose={() => setIsStudentModalOpen(false)} onSave={handleSaveStudentProfile} currentProfile={studentProfile} config={config} />
+    </div>
+  );
 }
