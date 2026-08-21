@@ -198,6 +198,27 @@ export default function App() {
 
   // Get unique class names from classes API
   const [classNames, setClassNames] = useState<string[]>([]);
+  // Restore student profile from localStorage on mount (must be before any conditional returns)
+  useEffect(() => {
+    if (role !== "STUDENT") return;
+    if (studentClassName && studentProfile) return;
+    const saved = localStorage.getItem("qlhs_student_profile");
+    if (!saved) return;
+    try {
+      const profile: StudentProfile = JSON.parse(saved);
+      if (profile.className && profile.studentName) {
+        setStudentClassName(profile.className);
+        storageService.saveStudentProfile(profile);
+        setStudentProfile(profile);
+        setStudentSubView("DASHBOARD");
+      } else {
+        localStorage.removeItem("qlhs_student_profile");
+      }
+    } catch {
+      localStorage.removeItem("qlhs_student_profile");
+    }
+  }, [role, studentClassName, studentProfile]);
+
   useEffect(() => {
     if (!isAdminAuthenticated) return;
     fetch("/api/classes")
@@ -292,27 +313,6 @@ export default function App() {
       </div>
     );
   }
-
-  // ─── Restore student profile from localStorage on mount ──────────────────
-  useEffect(() => {
-    if (role !== "STUDENT") return;
-    if (studentClassName && studentProfile) return; // Already have profile
-    const saved = localStorage.getItem("qlhs_student_profile");
-    if (!saved) return;
-    try {
-      const profile: StudentProfile = JSON.parse(saved);
-      if (profile.className && profile.studentName) {
-        setStudentClassName(profile.className);
-        storageService.saveStudentProfile(profile);
-        setStudentProfile(profile);
-        setStudentSubView("DASHBOARD");
-      } else {
-        localStorage.removeItem("qlhs_student_profile");
-      }
-    } catch {
-      localStorage.removeItem("qlhs_student_profile");
-    }
-  }, [role, studentClassName, studentProfile]);
 
   // ─── Student Interface ──────────────────────────────────────────────────
 
