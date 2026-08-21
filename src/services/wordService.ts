@@ -26,7 +26,7 @@ export async function generateSampleWordTemplate(lessons?: Lesson[]): Promise<vo
         properties: {},
         children: [
           new Paragraph({
-            text: "BIỂU MẪU CÂU HỎI ĐỊA LÍ 11 - CHƯƠNG TRÌNH GDPT 2018",
+            text: "BIỂU MẪU CÂU HỎI TOÁN THCS & THPT - CHƯƠNG TRÌNH GDPT 2018",
             heading: HeadingLevel.HEADING_1,
             alignment: AlignmentType.CENTER,
             spacing: { after: 120 },
@@ -217,11 +217,11 @@ export async function generateSampleWordTemplate(lessons?: Lesson[]): Promise<vo
 export async function exportQuestionBankToWord(
   questions: Question[],
   lessons?: Lesson[],
-  filename = "Ngan_Hang_Cau_Hoi_Dia_Li_11.docx"
+  filename = "Ngan_Hang_Cau_Hoi_Toan_THCS_THPT.docx"
 ): Promise<void> {
   const children: Paragraph[] = [
     new Paragraph({
-      text: "NGÂN HÀNG CÂU HỎI ĐỊA LÍ 11 - CHƯƠNG TRÌNH GDPT 2018",
+      text: "NGÂN HÀNG CÂU HỎI TOÁN THCS & THPT - CHƯƠNG TRÌNH GDPT 2018",
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.CENTER,
       spacing: { after: 180 },
@@ -412,7 +412,7 @@ export async function exportQuestionsToWord(
 ): Promise<void> {
   const children: Paragraph[] = [
     new Paragraph({
-      text: customHeaderTitle || "ĐỀ KIỂM TRA ĐỊA LÍ 11 - CHƯƠNG TRÌNH GDPT 2018",
+      text: customHeaderTitle || "ĐỀ KIỂM TRA TOÁN THCS & THPT - CHƯƠNG TRÌNH GDPT 2018",
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.CENTER,
       spacing: { after: 180 },

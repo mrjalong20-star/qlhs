@@ -1,12 +1,15 @@
 import { useState, useRef } from "react";
-import { Lock, Unlock, Upload, Search, BookOpen } from "lucide-react";
+import { Lock, Unlock, Upload, Search, BookOpen, FileText } from "lucide-react";
 import { Lesson, Question } from "../../types";
+import { parseWordQuestionBank } from "../../services/wordService";
+import { authService } from "../../services/authService";
 
 interface LessonManagerProps {
   lessons: Lesson[];
   questions: Question[];
   onUpdateLesson: (updated: Lesson) => void;
   onBatchUpdateLessons: (updatedList: Lesson[]) => void;
+  onBulkImportQuestions?: (newQuestions: Question[], mode: "MERGE" | "REPLACE") => void;
 }
 
 export function LessonManager({
@@ -14,12 +17,15 @@ export function LessonManager({
   questions,
   onUpdateLesson,
   onBatchUpdateLessons,
+  onBulkImportQuestions,
 }: LessonManagerProps) {
   const [query, setQuery] = useState("");
   const [gradeFilter, setGradeFilter] = useState<number | "ALL">("ALL");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
+  const jsonInputRef = useRef<HTMLInputElement>(null);
+  const docxInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter lessons
   const filtered = lessons.filter((l) => {
     const matchGrade = gradeFilter === "ALL" || l.grade === gradeFilter;
     const matchQuery = !query || l.title.toLowerCase().includes(query.toLowerCase()) || l.chapter.toLowerCase().includes(query.toLowerCase());
@@ -40,7 +46,8 @@ export function LessonManager({
     onBatchUpdateLessons(updated);
   };
 
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Import JSON file → lessons
+  const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -62,13 +69,83 @@ export function LessonManager({
           ...item,
         }));
         onBatchUpdateLessons([...imported, ...lessons]);
-        alert(`Đã import ${imported.length} bài giảng`);
+        alert(`Đã import ${imported.length} bài giảng từ JSON`);
       } catch {
-        alert("File không hợp lệ. Cần file JSON chứa danh sách bài học.");
+        alert("File JSON không hợp lệ.");
       }
     };
     reader.readAsText(file);
     e.target.value = "";
+  };
+
+  // Import Word (.docx) → lessons + questions
+  const handleImportDocx = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportMsg("Đang đọc file Word...");
+    try {
+      const result = await parseWordQuestionBank(file);
+      if (result.errors.length > 0) {
+        const errText = result.errors.slice(0, 5).map(e => `Dòng ${e.row}: ${e.reason}`).join("\n");
+        alert(`Có ${result.errors.length} lỗi:\n${errText}${result.errors.length > 5 ? "\n..." : ""}`);
+      }
+      if (result.validQuestions.length === 0) {
+        setImportMsg("Không tìm thấy câu hỏi hợp lệ trong file.");
+        return;
+      }
+      // Group questions by lessonId → create Lesson entries
+      const lessonMap = new Map<string, Question[]>();
+      for (const q of result.validQuestions) {
+        const lid = q.lessonId || "bai-01";
+        if (!lessonMap.has(lid)) lessonMap.set(lid, []);
+        lessonMap.get(lid)!.push(q);
+      }
+      const newLessons: Lesson[] = [];
+      for (const [lid, qs] of lessonMap) {
+        // Check if lesson already exists
+        const existing = lessons.find(l => l.id === lid);
+        if (!existing) {
+          const num = parseInt(lid.replace("bai-", "")) || newLessons.length + 1;
+          newLessons.push({
+            id: lid,
+            lessonNumber: num,
+            title: `Bài ${num}`,
+            chapter: "Nhập từ Word",
+            grade: 6,
+            semester: 1,
+            durationMinutes: 45,
+            allowReview: true,
+            reviewMode: "FULL",
+            isLocked: true,
+          });
+        }
+      }
+      if (newLessons.length > 0) {
+        onBatchUpdateLessons([...newLessons, ...lessons]);
+      }
+      // Import questions
+      if (onBulkImportQuestions) {
+        onBulkImportQuestions(result.validQuestions, "MERGE");
+      }
+      // Save via API
+      for (const q of result.validQuestions) {
+        try {
+          await fetch("/api/content/questions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authService.headers() },
+            body: JSON.stringify(q),
+          });
+        } catch {}
+      }
+      setImportMsg(`Đã import ${result.validQuestions.length} câu hỏi từ ${newLessons.length} bài mới.`);
+      setTimeout(() => setImportMsg(""), 4000);
+    } catch (err: any) {
+      setImportMsg("Lỗi đọc file Word: " + (err.message || "Không xác định"));
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
   };
 
   return (
@@ -86,12 +163,20 @@ export function LessonManager({
           <button onClick={() => handleLockAll(true)} className="px-3 py-2 rounded-lg bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 cursor-pointer">
             Khóa hết
           </button>
-          <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold cursor-pointer flex items-center gap-1">
-            <Upload className="w-3.5 h-3.5" /> Tải bài lên
+          <button onClick={() => jsonInputRef.current?.click()} disabled={importing} className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 cursor-pointer flex items-center gap-1">
+            <Upload className="w-3.5 h-3.5" /> JSON
           </button>
-          <input ref={fileInputRef} type="file" accept=".json" onChange={handleImportFile} className="hidden" />
+          <button onClick={() => docxInputRef.current?.click()} disabled={importing} className="px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer flex items-center gap-1">
+            <FileText className="w-3.5 h-3.5" /> {importing ? "Đang import..." : "Tải Word"}
+          </button>
+          <input ref={jsonInputRef} type="file" accept=".json" onChange={handleImportJson} className="hidden" />
+          <input ref={docxInputRef} type="file" accept=".docx" onChange={handleImportDocx} className="hidden" />
         </div>
       </div>
+
+      {importMsg && (
+        <div className="p-3 rounded-xl bg-blue-50 text-blue-800 text-xs font-medium">{importMsg}</div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
@@ -113,7 +198,7 @@ export function LessonManager({
           <div className="py-12 text-center text-slate-400">
             <BookOpen className="w-10 h-10 mx-auto mb-2 text-slate-300" />
             <p className="text-sm font-semibold text-slate-500">Chưa có bài học</p>
-            <p className="text-xs text-slate-400 mt-1">Nhấn "Tải bài lên" để import danh sách bài học từ file JSON</p>
+            <p className="text-xs text-slate-400 mt-1">Tải lên file Word (.docx) hoặc JSON để import danh sách bài học</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

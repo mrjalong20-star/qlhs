@@ -262,12 +262,12 @@ export default function App() {
           {currentView === "ASSIGNMENTS" && isAdminAuthenticated && (
             <TeacherAssignmentPanel
               lessons={lessons}
+              questions={questions}
               assignments={assignments}
-              classNames={classNames.length > 0 ? classNames : ["Chưa có lớp"]}
-              submissions={submissions}
               authSession={authSession}
               onSaveAssignment={(a) => persistAssignments([...assignments.filter((x) => x.className !== a.className), a])}
               onDeleteAssignment={(id) => persistAssignments(assignments.filter((a) => a.id !== id))}
+              onOpenExamEditor={(lessonId, classNames) => { setCurrentView('ADMIN'); }}
             />
           )}
           {currentView === "DASHBOARD" && (
