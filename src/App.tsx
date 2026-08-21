@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { StudentProfile, AppConfig, Lesson, Question, SubmissionResult, Exam, Assignment } from "./types";
 import { storageService } from "./services/storageService";
 import { Header } from "./components/common/Header";
-import { Footer } from "./components/common/Footer";
+import { AppLayout } from "./components/common/AppLayout";
 import { NetworkStatusBanner } from "./components/common/NetworkStatusBanner";
 import { RoleSelection } from "./components/common/RoleSelection";
 import { StudentClassEntry } from "./components/student/StudentClassEntry";
@@ -15,8 +15,7 @@ import { PracticeExamsView } from "./components/student/PracticeExamsView";
 import { MyResultsView } from "./components/student/MyResultsView";
 import { QuizRunner } from "./components/student/QuizRunner";
 import { QuizResultView } from "./components/student/QuizResultView";
-import { FormulaView } from "./components/student/FormulaView";
-import { FormulaManager } from "./components/admin/FormulaManager";
+
 import { AdminLoginModal } from "./components/admin/AdminLoginModal";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
 import { TeacherAssignmentPanel } from "./components/admin/TeacherAssignmentPanel";
@@ -25,7 +24,7 @@ import { telemetryService } from "./services/telemetryService";
 import { authService } from "./services/authService";
 import { apiService } from "./services/apiService";
 
-type AppView = "LESSONS" | "EXAMS" | "MY_RESULTS" | "FORMULAS" | "FORMULA_MANAGER" | "QUIZ" | "RESULT" | "ADMIN" | "ASSIGNMENTS";
+type AppView = "DASHBOARD" | "LESSONS" | "EXAMS" | "MY_RESULTS" | "HOMEWORK" | "QUIZ" | "RESULT" | "ADMIN" | "ASSIGNMENTS";
 type StudentSubView = "DASHBOARD" | "HOMEWORK" | "LESSONS" | "EXAMS" | "GAME";
 type UserRole = "NONE" | "TEACHER" | "STUDENT";
 
@@ -153,12 +152,6 @@ export default function App() {
   }, [studentProfile?.studentName, studentProfile?.className, studentProfile?.classId, config.googleAppsScriptUrl]);
 
   useEffect(() => {
-    const openFormulas = () => setCurrentView("FORMULAS");
-    window.addEventListener("open-formulas", openFormulas);
-    return () => window.removeEventListener("open-formulas", openFormulas);
-  }, []);
-
-  useEffect(() => {
     if (!studentProfile) return;
     const getActivity = () => currentView === "QUIZ" ? "EXAM" as const : ["LESSONS", "EXAMS"].includes(currentView) ? "LEARNING" as const : "IDLE" as const;
     const send = () => telemetryService.heartbeat(studentProfile, getActivity());
@@ -170,11 +163,12 @@ export default function App() {
   const handleSaveStudentProfile = (profile: StudentProfile) => { storageService.saveStudentProfile(profile); setStudentProfile(profile); setIsStudentModalOpen(false); if (pendingLessonToStart) { startQuizSession(pendingLessonToStart.lesson, pendingLessonToStart.questions, pendingLessonToStart.isRetake); setPendingLessonToStart(null); } };
   const startQuizSession = (lesson: Lesson, customQuestions?: Question[], isRetake = false) => { if (!studentProfile) { setPendingLessonToStart({ lesson, questions: customQuestions, isRetake }); setIsStudentModalOpen(true); return; } const quizQuestions = customQuestions || questions.filter(q => q.lessonId === lesson.id); if (!quizQuestions.length) { alert(`Bài học "${lesson.title}" hiện chưa có câu hỏi nào trong ngân hàng.`); return; } if (isRetake) storageService.clearActiveDraft(lesson.id); setIsActiveLessonRetake(isRetake); setActiveLesson(lesson); setActiveQuizQuestions(quizQuestions); setCurrentView("QUIZ"); window.scrollTo({top:0,behavior:"smooth"}); };
   const handleFinishQuiz = (result: SubmissionResult) => { setLatestResult(result); setSubmissions(prev => { const next=[result,...prev.filter(x=>x.attemptId!==result.attemptId)]; return next; }); setCurrentView("RESULT"); window.scrollTo({top:0,behavior:"smooth"}); };
-  const handleNavigate = (view: AppView) => {
-    if (view === "ADMIN" || view === "FORMULA_MANAGER" || view === "ASSIGNMENTS") {
+  const handleNavigate = (view: string) => {
+    const v = view as AppView;
+    if (v === "ADMIN" || v === "ASSIGNMENTS") {
       if (!isAdminAuthenticated) { setIsAdminLoginModalOpen(true); return; }
-      setCurrentView(view);
-    } else setCurrentView(view);
+      setCurrentView(v);
+    } else setCurrentView(v);
     window.scrollTo({top:0,behavior:"smooth"});
   };
   const handleUpdateLesson = (updatedLesson: Lesson) => { setLessons(lessons.map(l => l.id === updatedLesson.id ? updatedLesson : l)); void storageService.syncLessons([updatedLesson]).catch(console.error); };
@@ -219,23 +213,18 @@ export default function App() {
   // ─── Teacher Interface ──────────────────────────────────────────────────
   if (role === "TEACHER") {
     return (
-      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+      <div className="min-h-screen bg-slate-50 text-slate-900">
         <NetworkStatusBanner />
-        <Header
-          config={config}
-          studentProfile={null}
+        <AppLayout
           currentView={currentView}
-          onOpenStudentGate={() => {}}
-          onStudentLogout={() => {}}
-          onOpenAdminLogin={() => isAdminAuthenticated ? setCurrentView("ADMIN") : setIsAdminLoginModalOpen(true)}
           onNavigate={handleNavigate}
-          isAdmin={isAdminAuthenticated}
-          authSession={authSession}
+          userRole="TEACHER"
+          userName={authSession?.displayName}
+          userSubtitle={authSession?.role === "SUPER_ADMIN" ? "Quản trị viên" : "Giáo viên"}
           onLogout={handleAdminLogout}
           onSwitchRole={handleSwitchRole}
-          userRole="TEACHER"
-        />
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
+          isAdmin={isAdminAuthenticated}
+        >
           {currentView === "ADMIN" && isAdminAuthenticated && (
             <AdminDashboard
               questions={questions}
@@ -271,20 +260,18 @@ export default function App() {
               onDeleteAssignment={(id) => persistAssignments(assignments.filter((a) => a.id !== id))}
             />
           )}
-          {currentView === "FORMULA_MANAGER" && isAdminAuthenticated && <FormulaManager />}
-          {currentView === "LESSONS" && !isAdminAuthenticated && (
-            <div className="text-center py-20">
-              <p className="text-slate-500 text-sm">Vui lòng đăng nhập để truy cập khu vực quản trị.</p>
-            </div>
-          )}
-          {currentView === "LESSONS" && isAdminAuthenticated && (
+          {currentView === "DASHBOARD" && (
             <div className="text-center py-20">
               <p className="text-slate-600 text-lg font-semibold">Chào mừng Giáo viên!</p>
-              <p className="text-slate-500 text-sm mt-2">Sử dụng menu quản trị để quản lý lớp học và đề thi.</p>
+              <p className="text-slate-500 text-sm mt-2">Chọn menu bên trái để quản lý lớp học và đề thi.</p>
             </div>
           )}
-        </main>
-        <Footer config={config} onOpenTeacherAdmin={() => isAdminAuthenticated ? setCurrentView("ADMIN") : setIsAdminLoginModalOpen(true)} onOpenGasGuide={() => setIsGasGuideOpen(true)} />
+          {currentView === "LESSONS" && (
+            <div className="text-center py-20">
+              <p className="text-slate-500 text-sm">Chọn menu bên trái để quản lý.</p>
+            </div>
+          )}
+        </AppLayout>
         <AdminLoginModal
           isOpen={isAdminLoginModalOpen}
           onClose={() => setIsAdminLoginModalOpen(false)}
@@ -335,35 +322,32 @@ export default function App() {
 
   // Step 2+: Dashboard or specific section
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <NetworkStatusBanner />
-      <Header
-        config={config}
-        studentProfile={studentProfile}
-        currentView={currentView}
-        onOpenStudentGate={() => setIsStudentModalOpen(true)}
-        onStudentLogout={() => {
+      <AppLayout
+        currentView={currentView === "QUIZ" || currentView === "RESULT" ? "DASHBOARD" : currentView}
+        onNavigate={(v) => {
+          setCurrentView(v as AppView);
+          if (["LESSONS", "EXAMS", "MY_RESULTS"].includes(v)) {
+            setStudentSubView(v === "LESSONS" ? "LESSONS" : v === "EXAMS" ? "EXAMS" : "DASHBOARD");
+          } else if (v === "DASHBOARD") {
+            setStudentSubView("DASHBOARD");
+          } else if (v === "HOMEWORK") {
+            setStudentSubView("HOMEWORK");
+          }
+        }}
+        userRole="STUDENT"
+        userName={studentProfile?.studentName}
+        userSubtitle={`Lớp ${studentClassName}`}
+        onLogout={() => {
           storageService.clearStudentProfile();
-          localStorage.removeItem("geo11_student_session_id");
+          localStorage.removeItem("toan_student_session_id");
           setStudentProfile(null);
           setCurrentView("LESSONS");
           setStudentSubView("DASHBOARD");
         }}
-        onOpenAdminLogin={() => {}}
-        onNavigate={(v) => {
-          setCurrentView(v);
-          if (["LESSONS", "EXAMS", "MY_RESULTS", "FORMULAS"].includes(v)) {
-            setStudentSubView(v === "LESSONS" ? "LESSONS" : v === "EXAMS" ? "EXAMS" : "DASHBOARD");
-          }
-        }}
-        isAdmin={false}
-        authSession={null}
-        onLogout={() => {}}
         onSwitchRole={handleSwitchRole}
-        userRole="STUDENT"
-      />
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
-
+      >
         {/* Quiz / Result views take over completely */}
         {currentView === "QUIZ" && activeLesson && (
           <QuizRunner lesson={activeLesson} questions={activeQuizQuestions} student={studentProfile || { studentName: "Học sinh", className: studentClassName, dateOfBirth: "", grade: 6 }} config={config} isRetake={isActiveLessonRetake} onFinishQuiz={handleFinishQuiz} onCancelQuiz={() => { setCurrentView("LESSONS"); setStudentSubView("DASHBOARD"); }} />
@@ -373,16 +357,17 @@ export default function App() {
         )}
 
         {/* Dashboard or section views */}
-        {currentView !== "QUIZ" && currentView !== "RESULT" && studentSubView === "DASHBOARD" && (            <StudentDashboard
-              className={studentClassName}
-              studentName={studentProfile?.studentName || "Học sinh"}
-              grade={studentProfile?.grade}
-              assignments={assignments}
-              lessons={lessons}
-              exams={exams}
-              submissions={submissions}
-              isFirstLogin={isFirstStudentLogin}
-              onSelectSection={(section) => {
+        {currentView !== "QUIZ" && currentView !== "RESULT" && studentSubView === "DASHBOARD" && (
+          <StudentDashboard
+            className={studentClassName}
+            studentName={studentProfile?.studentName || "Học sinh"}
+            grade={studentProfile?.grade}
+            assignments={assignments}
+            lessons={lessons}
+            exams={exams}
+            submissions={submissions}
+            isFirstLogin={isFirstStudentLogin}
+            onSelectSection={(section) => {
               setStudentSubView(section);
               setCurrentView(section === "HOMEWORK" ? "LESSONS" : section === "LESSONS" ? "LESSONS" : "EXAMS");
             }}
@@ -401,41 +386,21 @@ export default function App() {
         )}
 
         {currentView !== "QUIZ" && currentView !== "RESULT" && studentSubView === "LESSONS" && (
-          <>
-            <button onClick={() => setStudentSubView("DASHBOARD")} className="mb-4 text-sm font-semibold text-sky-600 hover:text-sky-800">← Quay lại bảng điều khiển</button>
-            <LessonListView lessons={lessons} questions={questions} submissions={submissions} student={studentProfile || { studentName: "Học sinh", className: studentClassName, dateOfBirth: "", grade: 6 }} onStartLesson={(lesson, retake) => startQuizSession(lesson, undefined, retake)} onOpenStudentModal={() => setIsStudentModalOpen(true)} />
-          </>
+          <LessonListView lessons={lessons} questions={questions} submissions={submissions} student={studentProfile || { studentName: "Học sinh", className: studentClassName, dateOfBirth: "", grade: 6 }} onStartLesson={(lesson, retake) => startQuizSession(lesson, undefined, retake)} onOpenStudentModal={() => setIsStudentModalOpen(true)} />
         )}
 
         {currentView !== "QUIZ" && currentView !== "RESULT" && studentSubView === "EXAMS" && (
-          <>
-            <button onClick={() => setStudentSubView("DASHBOARD")} className="mb-4 text-sm font-semibold text-indigo-600 hover:text-indigo-800">← Quay lại bảng điều khiển</button>
-            <PracticeExamsView exams={exams} questions={questions} student={studentProfile || { studentName: "Học sinh", className: studentClassName, dateOfBirth: "", grade: 6 }} isAdmin={false} onStartExam={(lesson, qs) => startQuizSession(lesson, qs, true)} onOpenStudentModal={() => setIsStudentModalOpen(true)} onOpenAdminExamManager={() => {}} />
-          </>
+          <PracticeExamsView exams={exams} questions={questions} student={studentProfile || { studentName: "Học sinh", className: studentClassName, dateOfBirth: "", grade: 6 }} isAdmin={false} onStartExam={(lesson, qs) => startQuizSession(lesson, qs, true)} onOpenStudentModal={() => setIsStudentModalOpen(true)} onOpenAdminExamManager={() => {}} />
         )}
 
         {currentView !== "QUIZ" && currentView !== "RESULT" && studentSubView === "GAME" && (
-          <>
-            <button onClick={() => setStudentSubView("DASHBOARD")} className="mb-4 text-sm font-semibold text-purple-600 hover:text-purple-800">← Quay lại bảng điều khiển</button>
-            <QuizGame lessons={lessons} questions={questions} completedLessonIds={new Set(submissions.map(s => s.lessonId))} onSelectLesson={(lesson) => startQuizSession(lesson)} />
-          </>
+          <QuizGame lessons={lessons} questions={questions} completedLessonIds={new Set(submissions.map(s => s.lessonId))} onSelectLesson={(lesson) => startQuizSession(lesson)} />
         )}
 
         {currentView === "MY_RESULTS" && (
-          <>
-            <button onClick={() => { setCurrentView("LESSONS"); setStudentSubView("DASHBOARD"); }} className="mb-4 text-sm font-semibold text-sky-600 hover:text-sky-800">← Quay lại bảng điều khiển</button>
-            <MyResultsView student={studentProfile} lessons={lessons} submissions={submissions} onRetakeLesson={lesson => startQuizSession(lesson, undefined, true)} onOpenStudentModal={() => setIsStudentModalOpen(true)} />
-          </>
+          <MyResultsView student={studentProfile} lessons={lessons} submissions={submissions} onRetakeLesson={lesson => startQuizSession(lesson, undefined, true)} onOpenStudentModal={() => setIsStudentModalOpen(true)} />
         )}
-
-        {currentView === "FORMULAS" && (
-          <>
-            <button onClick={() => { setCurrentView("LESSONS"); setStudentSubView("DASHBOARD"); }} className="mb-4 text-sm font-semibold text-amber-600 hover:text-amber-800">← Quay lại bảng điều khiển</button>
-            <FormulaView student={studentProfile} />
-          </>
-        )}
-      </main>
-      <Footer config={config} onOpenTeacherAdmin={() => {}} />
+      </AppLayout>
       <StudentGateModal isOpen={isStudentModalOpen} onClose={() => setIsStudentModalOpen(false)} onSave={handleSaveStudentProfile} currentProfile={studentProfile} config={config} />
     </div>
   );

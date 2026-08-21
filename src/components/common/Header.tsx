@@ -1,44 +1,131 @@
 import { useState } from "react";
-import { Compass, BookOpen, FileCheck2, Trophy, Calculator, User, Lock, Menu, X, Sparkles, LogOut, Settings2, ClipboardList } from "lucide-react";
+import { Compass, BookOpen, FileCheck2, User, Menu, X, LogOut, ClipboardList } from "lucide-react";
 import { StudentProfile, AppConfig } from "../../types";
 
 interface HeaderProps {
   config: AppConfig; studentProfile: StudentProfile | null;
-  currentView: "LESSONS" | "EXAMS" | "MY_RESULTS" | "FORMULAS" | "FORMULA_MANAGER" | "QUIZ" | "RESULT" | "ADMIN" | "ASSIGNMENTS";
+  currentView: "LESSONS" | "EXAMS" | "MY_RESULTS" | "QUIZ" | "RESULT" | "ADMIN" | "ASSIGNMENTS";
   onOpenStudentGate: () => void; onOpenAdminLogin: () => void; onStudentLogout: () => void;
-  onNavigate: (view: "LESSONS" | "EXAMS" | "MY_RESULTS" | "FORMULAS" | "FORMULA_MANAGER" | "ADMIN" | "ASSIGNMENTS") => void;
+  onNavigate: (view: "LESSONS" | "EXAMS" | "MY_RESULTS" | "ADMIN" | "ASSIGNMENTS") => void;
   isAdmin: boolean; authSession?: { role: "SUPER_ADMIN" | "TEACHER"; username: string; displayName: string } | null; onLogout: () => void;
   onSwitchRole?: () => void; userRole?: "TEACHER" | "STUDENT";
 }
 
 export function Header({ config, studentProfile, currentView, onOpenStudentGate, onOpenAdminLogin, onStudentLogout, onNavigate, isAdmin, authSession, onLogout, onSwitchRole, userRole }: HeaderProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
-  return <header id="main-header" className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-xs">
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8"><div className="flex items-center justify-between h-16 sm:h-20">
-      <div id="brand-logo-container" onClick={() => onNavigate("LESSONS")} className="flex items-center gap-3 cursor-pointer group"><div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-md"><Compass className="w-6 h-6 sm:w-7 sm:h-7" /></div><div><div className="flex items-center gap-2"><span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900">QUẢN LÝ HỌC SINH</span><span className="hidden md:inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-sky-100 text-sky-800 border border-sky-200">GDPT 2018</span></div><p className="text-xs text-slate-500 font-medium truncate max-w-[200px] sm:max-w-none">{config.schoolName} • Năm học {config.schoolYear}</p></div></div>
-      <nav id="desktop-nav" className="hidden lg:flex items-center gap-1">
-        {userRole !== "TEACHER" && <><button id="nav-tab-lessons" onClick={() => onNavigate("LESSONS")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "LESSONS" ? "bg-sky-50 text-sky-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><BookOpen className="w-4 h-4"/><span>Bài học</span></button>
-        <button id="nav-tab-exams" onClick={() => onNavigate("EXAMS")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "EXAMS" ? "bg-sky-50 text-sky-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><FileCheck2 className="w-4 h-4"/><span>Đề kiểm tra</span></button>
-        <button id="nav-tab-formulas" onClick={() => onNavigate("FORMULAS")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "FORMULAS" ? "bg-amber-50 text-amber-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><Calculator className="w-4 h-4"/><span>Công thức</span></button>
-        <button id="nav-tab-results" onClick={() => onNavigate("MY_RESULTS")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "MY_RESULTS" ? "bg-sky-50 text-sky-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><Trophy className="w-4 h-4 text-amber-500"/><span>Kết quả</span></button></>}
-        {isAdmin && <button id="nav-tab-assignments" onClick={() => onNavigate("ASSIGNMENTS")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "ASSIGNMENTS" ? "bg-amber-50 text-amber-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><ClipboardList className="w-4 h-4"/><span>Giao bài</span></button>}
-        {isAdmin && <button id="nav-tab-formula-manager" onClick={() => onNavigate("FORMULA_MANAGER")} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${currentView === "FORMULA_MANAGER" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-100"}`}><Settings2 className="w-4 h-4"/><span>Quản lý công thức</span></button>}
-      </nav>
-      <div className="flex items-center gap-2 sm:gap-3">
-        {studentProfile ? <div id="student-profile-badge" className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-full"><div className="w-6 h-6 rounded-full bg-sky-500 text-white flex items-center justify-center text-xs font-bold">{studentProfile.studentName.charAt(0).toUpperCase()}</div><div className="hidden sm:block leading-tight"><p className="text-xs font-semibold text-slate-800 truncate max-w-[120px]">{studentProfile.studentName}</p><p className="text-[10px] text-slate-500">Lớp {studentProfile.className}</p></div><button onClick={onOpenStudentGate} className="text-xs text-sky-600 underline">Đổi</button><button onClick={onStudentLogout} className="text-slate-400 hover:text-rose-600"><LogOut className="w-3.5 h-3.5"/></button></div> : <button id="btn-enter-student" onClick={onOpenStudentGate} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-semibold"><User className="w-3.5 h-3.5"/><span>Học sinh</span></button>}
-        {authSession ? <div className="relative"><button id="btn-session-profile" onClick={() => setSessionMenuOpen(v => !v)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 text-white"><div className="w-6 h-6 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center text-[10px] font-black">{authSession.displayName.charAt(0)}</div><div className="hidden sm:block text-left leading-tight"><p className="text-[11px] font-bold">{authSession.displayName}</p><p className="text-[9px] text-slate-400">{authSession.role === "SUPER_ADMIN" ? "Quản trị viên" : "Giáo viên"}</p></div></button>{sessionMenuOpen && <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50"><p className="text-xs font-bold">{authSession.displayName}</p><p className="text-[11px] text-slate-500">Tài khoản: {authSession.username}</p><p className="text-[11px] text-slate-500">Quyền: {authSession.role === "SUPER_ADMIN" ? "Quản trị viên" : "Giáo viên"}</p><button onClick={() => {setSessionMenuOpen(false);onLogout();}} className="mt-3 w-full py-2 rounded-xl bg-rose-50 text-rose-700 text-xs font-bold">Thoát đăng nhập</button></div>}</div> : null}
-        {isAdmin ? <button id="btn-admin-portal" onClick={() => onNavigate("ADMIN")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-100"><Sparkles className="w-3.5 h-3.5 text-amber-400"/><span className="hidden sm:inline">Quản trị</span></button> : <button id="btn-open-teacher-login" onClick={onOpenAdminLogin} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 bg-slate-100 border border-slate-200"><Lock className="w-3.5 h-3.5 text-slate-500"/><span className="hidden sm:inline">Giáo viên</span></button>}
-        {onSwitchRole && <button onClick={onSwitchRole} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 hover:bg-slate-200 transition-colors"><span>{userRole === "TEACHER" ? "Giáo viên" : "Học sinh"}</span><span className="text-slate-400">•</span><span className="text-sky-600">Đổi</span></button>}
-        <button id="btn-mobile-menu" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-lg text-slate-600 lg:hidden">{mobileMenuOpen ? <X className="w-6 h-6"/> : <Menu className="w-6 h-6"/>}</button>
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  return (
+    <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
+      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        {/* Brand */}
+        <div onClick={() => onNavigate("LESSONS")} className="flex items-center gap-2 cursor-pointer">
+          <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center">
+            <Compass className="w-5 h-5" />
+          </div>
+          <span className="font-extrabold text-sm text-slate-900 tracking-tight hidden sm:block">
+            QLHS
+          </span>
+        </div>
+
+        {/* Desktop nav */}
+        <nav className="hidden md:flex items-center gap-1">
+          {userRole !== "TEACHER" && (
+            <>
+              <NavBtn icon={BookOpen} label="Bài học" active={currentView === "LESSONS"} onClick={() => onNavigate("LESSONS")} />
+              <NavBtn icon={FileCheck2} label="Đề thi" active={currentView === "EXAMS"} onClick={() => onNavigate("EXAMS")} />
+            </>
+          )}
+          {isAdmin && (
+            <>
+              <NavBtn icon={ClipboardList} label="Giao bài" active={currentView === "ASSIGNMENTS"} onClick={() => onNavigate("ASSIGNMENTS")} />
+            </>
+          )}
+        </nav>
+
+        {/* Right side */}
+        <div className="flex items-center gap-2">
+          {/* Student info */}
+          {studentProfile && (
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">
+                {studentProfile.studentName.charAt(0)}
+              </div>
+              <span className="text-xs font-semibold text-slate-700 hidden sm:block">{studentProfile.studentName}</span>
+              <button onClick={onStudentLogout} className="text-slate-400 hover:text-red-500 cursor-pointer" title="Đăng xuất">
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Teacher / Admin */}
+          {authSession && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-600 hidden sm:block">{authSession.displayName}</span>
+              {isAdmin && (
+                <button onClick={() => onNavigate("ADMIN")} className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold cursor-pointer">
+                  Quản trị
+                </button>
+              )}
+              <button onClick={onLogout} className="text-slate-400 hover:text-red-500 cursor-pointer" title="Đăng xuất">
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {!authSession && !studentProfile && (
+            <button onClick={onOpenAdminLogin} className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 cursor-pointer">
+              Giáo viên
+            </button>
+          )}
+
+          {/* Switch role */}
+          {onSwitchRole && (
+            <button onClick={onSwitchRole} className="px-2 py-1.5 rounded-lg text-xs text-slate-500 hover:bg-slate-100 cursor-pointer">
+              Đổi
+            </button>
+          )}
+
+          {/* Mobile menu */}
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 md:hidden text-slate-600 cursor-pointer">
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
-    </div>
-    {mobileMenuOpen && <div id="mobile-nav-drawer" className="lg:hidden border-t border-slate-200 py-3 space-y-1 bg-white">
-      {userRole !== "TEACHER" && <><button onClick={() => {onNavigate("LESSONS");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><BookOpen className="inline w-5 h-5 mr-2 text-sky-600"/>Bài học</button>
-      <button onClick={() => {onNavigate("EXAMS");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><FileCheck2 className="inline w-5 h-5 mr-2 text-indigo-600"/>Đề kiểm tra</button>
-      <button onClick={() => {onNavigate("FORMULAS");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><Calculator className="inline w-5 h-5 mr-2 text-amber-500"/>Công thức</button>
-      <button onClick={() => {onNavigate("MY_RESULTS");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><Trophy className="inline w-5 h-5 mr-2 text-amber-500"/>Kết quả học tập</button></>}
-      {isAdmin && <button onClick={() => {onNavigate("ASSIGNMENTS");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><ClipboardList className="inline w-5 h-5 mr-2 text-amber-600"/>Giao bài tập</button>}
-      {isAdmin && <button onClick={() => {onNavigate("FORMULA_MANAGER");setMobileMenuOpen(false);}} className="w-full text-left px-4 py-3 rounded-lg text-sm"><Settings2 className="inline w-5 h-5 mr-2 text-indigo-600"/>Quản lý công thức</button>}
-    </div>}
-    </div></header>;
+
+      {/* Mobile nav */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-100 bg-white py-2">
+          {userRole !== "TEACHER" && (
+            <>
+              <MobileBtn icon={BookOpen} label="Bài học" onClick={() => { onNavigate("LESSONS"); setMobileMenuOpen(false); }} />
+              <MobileBtn icon={FileCheck2} label="Đề thi" onClick={() => { onNavigate("EXAMS"); setMobileMenuOpen(false); }} />
+            </>
+          )}
+          {isAdmin && (
+            <>
+              <MobileBtn icon={ClipboardList} label="Giao bài" onClick={() => { onNavigate("ASSIGNMENTS"); setMobileMenuOpen(false); }} />
+            </>
+          )}
+        </div>
+      )}
+    </header>
+  );
+}
+
+function NavBtn({ icon: Icon, label, active, onClick }: { icon: any; label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}>
+      <Icon className="w-3.5 h-3.5" />
+      {label}
+    </button>
+  );
+}
+
+function MobileBtn({ icon: Icon, label, onClick }: { icon: any; label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50">
+      <Icon className="w-5 h-5 text-slate-400" />
+      {label}
+    </button>
+  );
 }

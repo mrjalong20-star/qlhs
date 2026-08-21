@@ -14,11 +14,47 @@ export function FormulaView({ student }: { student: StudentProfile | null }) {
       .catch(() => setFormulas([]));
   }, [grade]);
   const visible = useMemo(() => formulas.filter(f => !query || `${f.title} ${f.chapter} ${f.topic} ${f.formula} ${f.explanation}`.toLowerCase().includes(query.toLowerCase())), [formulas, query]);
-  return <div className="space-y-6">
-    <div className="bg-gradient-to-r from-indigo-700 to-sky-600 rounded-3xl p-7 text-white shadow-lg"><div className="flex items-center gap-3"><Calculator className="w-8 h-8"/><div><h1 className="text-2xl font-extrabold">Công thức Toán</h1><p className="text-sm text-indigo-100">Công thức theo khối 6–12, có ví dụ và hình minh họa.</p></div></div></div>
-    <div className="flex flex-wrap gap-2">{[6,7,8,9,10,11,12].map(g => <button key={g} onClick={() => setGrade(g as Grade)} className={`px-4 py-2 rounded-xl text-xs font-bold ${grade === g ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-700"}`}>Khối {g}</button>)}</div>
-    <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Tìm công thức, chuyên đề..." className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-white"/></div>
-    <div className="grid md:grid-cols-2 gap-5">{visible.map(f => <article key={f.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm"><h3 className="font-bold text-lg">{f.title}</h3><p className="text-xs text-slate-500 mt-1">{f.chapter}{f.topic ? ` • ${f.topic}` : ""}</p><div className="mt-4 p-4 bg-slate-50 rounded-xl text-xl font-semibold overflow-x-auto">{f.formula}</div>{f.explanation && <p className="text-sm text-slate-600 mt-3">{f.explanation}</p>}{f.example && <p className="text-sm text-slate-700 mt-2"><b>Ví dụ:</b> {f.example}</p>}{f.imageUrl && <img src={f.imageUrl} alt={f.title} className="mt-4 w-full rounded-xl border border-slate-200 object-contain max-h-72"/>}</article>)}</div>
-    {!visible.length && <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 text-slate-500">Chưa có công thức cho khối này.</div>}
-  </div>;
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-4 pt-2">
+      <h2 className="text-base font-extrabold text-slate-900">Công thức</h2>
+
+      {/* Grade tabs */}
+      <div className="flex gap-1 flex-wrap">
+        {[6, 7, 8, 9, 10, 11, 12].map(g => (
+          <button key={g} onClick={() => setGrade(g as Grade)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${grade === g ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+            Khối {g}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Tìm công thức..."
+          className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+
+      {/* Formulas */}
+      {visible.length === 0 ? (
+        <div className="text-center py-16">
+          <Calculator className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <p className="text-sm font-semibold text-slate-500">Chưa có công thức</p>
+          <p className="text-xs text-slate-400 mt-1">Giáo viên sẽ thêm công thức khi đến lúc</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {visible.map(f => (
+            <div key={f.id} className="bg-white border border-slate-200 rounded-xl p-4">
+              <h3 className="text-sm font-bold text-slate-900">{f.title}</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{f.chapter}</p>
+              <div className="mt-3 p-3 bg-slate-50 rounded-lg text-base font-semibold font-mono text-center">{f.formula}</div>
+              {f.explanation && <p className="text-xs text-slate-600 mt-2">{f.explanation}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

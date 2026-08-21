@@ -1,8 +1,5 @@
 import { StudentProfile, StudentAnswers, SubmissionResult, AppConfig, Lesson, Question, Exam } from "../types";
 import { STORAGE_KEYS, DEFAULT_CONFIG } from "../config/appConfig";
-import { curriculumLessons } from "../data/curriculum";
-import { sampleQuestions } from "../data/sampleQuestions";
-import { DEFAULT_EXAMS } from "../data/mockExams";
 import { authService } from "./authService";
 
 export interface ActiveAttemptDraft { attemptId:string; studentName:string; className:string; lessonId:string; lessonTitle:string; semester:number; answers:StudentAnswers; flaggedQuestionIds:string[]; currentQuestionIndex:number; startedAt:string; elapsedSeconds:number; }
@@ -19,15 +16,15 @@ export const storageService = {
   getLocalSubmissions():SubmissionResult[]{try{const d=localStorage.getItem(STORAGE_KEYS.LOCAL_SUBMISSIONS);return d?JSON.parse(d):[];}catch{return[];}},
   getSubmissions(){return this.getLocalSubmissions();},
   saveLocalSubmission(result:SubmissionResult){try{const l=this.getLocalSubmissions();const i=l.findIndex(x=>x.attemptId===result.attemptId);if(i>=0)l[i]=result;else l.unshift(result);localStorage.setItem(STORAGE_KEYS.LOCAL_SUBMISSIONS,JSON.stringify(l));}catch{}},
-  getLessons(){try{const d=localStorage.getItem(LESSONS_STORAGE_KEY);if(d){const p=JSON.parse(d);if(Array.isArray(p)&&p.length)return p;}return curriculumLessons;}catch{return curriculumLessons;}},
+  getLessons(){try{const d=localStorage.getItem(LESSONS_STORAGE_KEY);if(d){const p=JSON.parse(d);if(Array.isArray(p))return p;}return [];}catch{return [];}},
   saveLessons(lessons:Lesson[]){localStorage.setItem(LESSONS_STORAGE_KEY,JSON.stringify(lessons));},
   async syncLessons(lessons:Lesson[]){for(const l of lessons) await onlineContent<Lesson>("/api/content/lessons",{method:"POST",body:JSON.stringify(l)});localStorage.setItem(LESSONS_STORAGE_KEY,JSON.stringify(lessons));return lessons;},
   async deleteLesson(id:string){await onlineContent(`/api/content/lessons/${encodeURIComponent(id)}`,{method:"DELETE"});const next=this.getLessons().filter((x:Lesson)=>x.id!==id);localStorage.setItem(LESSONS_STORAGE_KEY,JSON.stringify(next));},
-  getQuestions(){try{const d=localStorage.getItem(QUESTIONS_STORAGE_KEY);if(d){const p=JSON.parse(d);if(Array.isArray(p)&&p.length){const m=new Map<string,Question>();sampleQuestions.forEach(q=>m.set(q.id,q));p.forEach((q:Question)=>m.set(q.id,q));return Array.from(m.values());}}return sampleQuestions;}catch{return sampleQuestions;}},
+  getQuestions(){try{const d=localStorage.getItem(QUESTIONS_STORAGE_KEY);if(d){const p=JSON.parse(d);if(Array.isArray(p))return p;}return [];}catch{return [];}},
   saveQuestions(questions:Question[]){localStorage.setItem(QUESTIONS_STORAGE_KEY,JSON.stringify(questions));},
   async syncQuestions(questions:Question[]){for(const q of questions) await onlineContent<Question>("/api/content/questions",{method:"POST",body:JSON.stringify(q)});localStorage.setItem(QUESTIONS_STORAGE_KEY,JSON.stringify(questions));return questions;},
   async deleteQuestion(id:string){await onlineContent(`/api/content/questions/${encodeURIComponent(id)}`,{method:"DELETE"});const next=this.getQuestions().filter((x:Question)=>x.id!==id);localStorage.setItem(QUESTIONS_STORAGE_KEY,JSON.stringify(next));},
-  getExams(){try{const d=localStorage.getItem(EXAMS_STORAGE_KEY);if(d){const p=JSON.parse(d);if(Array.isArray(p)&&p.length){const m=new Map<string,Exam>();DEFAULT_EXAMS.forEach(e=>m.set(e.id,e));p.forEach((e:Exam)=>m.set(e.id,e));return Array.from(m.values());}}return DEFAULT_EXAMS;}catch{return DEFAULT_EXAMS;}},
+  getExams(){try{const d=localStorage.getItem(EXAMS_STORAGE_KEY);if(d){const p=JSON.parse(d);if(Array.isArray(p))return p;}return [];}catch{return [];}},
   saveExams(exams:Exam[]){localStorage.setItem(EXAMS_STORAGE_KEY,JSON.stringify(exams));},
   async syncExams(exams:Exam[]){for(const e of exams) await onlineContent<Exam>("/api/content/exams",{method:"POST",body:JSON.stringify(e)});localStorage.setItem(EXAMS_STORAGE_KEY,JSON.stringify(exams));return exams;},
   async deleteExam(id:string){await onlineContent(`/api/content/exams/${encodeURIComponent(id)}`,{method:"DELETE"});const next=this.getExams().filter((x:Exam)=>x.id!==id);localStorage.setItem(EXAMS_STORAGE_KEY,JSON.stringify(next));},
@@ -42,5 +39,5 @@ export const storageService = {
   getAdminAuth(){try{return sessionStorage.getItem(STORAGE_KEYS.ADMIN_AUTH)==="authenticated";}catch{return false;}},
   isAdminLoggedIn(){return this.getAdminAuth();},
   setAdminAuth(isAuth:boolean){try{if(isAuth)sessionStorage.setItem(STORAGE_KEYS.ADMIN_AUTH,"authenticated");else sessionStorage.removeItem(STORAGE_KEYS.ADMIN_AUTH);}catch{}},
-  resetToInitialSeed(){try{localStorage.setItem(LESSONS_STORAGE_KEY,JSON.stringify(curriculumLessons));localStorage.setItem(QUESTIONS_STORAGE_KEY,JSON.stringify(sampleQuestions));localStorage.setItem(EXAMS_STORAGE_KEY,JSON.stringify(DEFAULT_EXAMS));localStorage.setItem(STORAGE_KEYS.APP_CONFIG,JSON.stringify(DEFAULT_CONFIG));}catch{}}
+  resetToInitialSeed(){try{localStorage.removeItem(LESSONS_STORAGE_KEY);localStorage.removeItem(QUESTIONS_STORAGE_KEY);localStorage.removeItem(EXAMS_STORAGE_KEY);localStorage.setItem(STORAGE_KEYS.APP_CONFIG,JSON.stringify(DEFAULT_CONFIG));}catch{}}
 };
