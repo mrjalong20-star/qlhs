@@ -698,15 +698,22 @@ export function ExamEditorModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setPickMode("AUTO"); setShowLessonPicker(false); }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    pickMode === "AUTO"
-                      ? "bg-purple-600 text-white border-purple-600 shadow-xs"
-                      : "bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100"
-                  }`}
+                  onClick={() => {
+                    // Auto-pick random questions from all available
+                    const pool = allAvailableQuestions;
+                    const poolP1 = pool.filter(q => q.part === "PART_1");
+                    const poolP2 = pool.filter(q => q.part === "PART_2");
+                    const poolP3 = pool.filter(q => q.part === "PART_3");
+                    const shuffle = (arr: Question[]) => [...arr].sort(() => Math.random() - 0.5);
+                    const picked = [...shuffle(poolP1).slice(0, 18), ...shuffle(poolP2).slice(0, 4), ...shuffle(poolP3).slice(0, 6)];
+                    setSelectedQuestionIds(picked.map(q => q.id));
+                    setShowLessonPicker(false);
+                    setPickMode("MANUAL");
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer flex items-center gap-1.5 bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Tạo tự động theo ma trận</span>
+                  <span>Bốc nhanh 28 câu</span>
                 </button>
               </div>
             </div>
@@ -1054,6 +1061,47 @@ export function ExamEditorModal({
                     <Sparkles className="w-4 h-4 text-amber-300" />
                     <span>Tạo đề ngay bây giờ</span>
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Selected Questions Review List — always show when there are selected questions */}
+            {selectedQuestionIds.length > 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-extrabold text-slate-800 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    ĐÃ CHỌN {selectedQuestionIds.length} CÂU HỎI — XÓA CÂU KHÔNG ĐÚNG Ý TRƯỚC KHI LƯU ĐỀ
+                  </h4>
+                  <button type="button" onClick={handleClearSelected} className="text-[10px] font-bold text-rose-500 hover:text-rose-700 cursor-pointer">
+                    Xóa hết
+                  </button>
+                </div>
+                <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1">
+                  {selectedQuestions.map((q, idx) => (
+                    <div key={q.id} className="flex items-start gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs group hover:bg-rose-50/50 hover:border-rose-200 transition-all">
+                      <span className="text-[10px] font-bold text-slate-400 w-5 shrink-0 pt-0.5">{idx + 1}.</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1 mb-1">
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                            q.part === "PART_1" ? "bg-sky-100 text-sky-800" : q.part === "PART_2" ? "bg-emerald-100 text-emerald-800" : "bg-indigo-100 text-indigo-800"
+                          }`}>P{q.part === "PART_1" ? "I" : q.part === "PART_2" ? "II" : "III"}</span>
+                          <span className="text-[9px] text-slate-500">[{q.level}]</span>
+                          {q.answer && <span className="text-[9px] text-emerald-700 font-bold">Đ/A: {q.answer}</span>}
+                          {q.shortAnswer && <span className="text-[9px] text-emerald-700 font-bold">Đ/A: {q.shortAnswer}</span>}
+                        </div>
+                        <p className="text-slate-800 font-medium line-clamp-2 leading-relaxed">{q.questionText}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleQuestion(q.id)}
+                        className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-100 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-all shrink-0 cursor-pointer"
+                        title="Xóa câu này"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
