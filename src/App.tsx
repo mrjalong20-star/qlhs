@@ -47,7 +47,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>("LESSONS");
   const [studentSubView, setStudentSubView] = useState<StudentSubView>("DASHBOARD");
   const [studentClassName, setStudentClassName] = useState<string | null>(() => localStorage.getItem("qlhs_student_class"));
-  const [isFirstStudentLogin, setIsFirstStudentLogin] = useState(() => !localStorage.getItem("qlhs_student_class"));
+  const [isFirstStudentLogin, setIsFirstStudentLogin] = useState(() => !localStorage.getItem("qlhs_student_profile"));
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [activeQuizQuestions, setActiveQuizQuestions] = useState<Question[]>([]);
   const [latestResult, setLatestResult] = useState<SubmissionResult | null>(null);
@@ -56,6 +56,15 @@ export default function App() {
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState(false);
   const [isGasGuideOpen, setIsGasGuideOpen] = useState(false);
+
+  // Auto-detect ?class= from URL → set role to STUDENT on mount
+  useEffect(() => {
+    const classId = new URLSearchParams(window.location.search).get("class");
+    if (classId && !localStorage.getItem("qlhs_user_role")) {
+      setRole("STUDENT");
+      localStorage.setItem("qlhs_user_role", "STUDENT");
+    }
+  }, []);
 
   const persistAssignments = (a: Assignment[]) => {
     setAssignments(a);
@@ -77,15 +86,32 @@ export default function App() {
     setStudentSubView("DASHBOARD");
   };
 
-  const handleStudentEnterClass = (className: string) => {
+  const handleStudentEnterClass = (className: string, studentName: string, dateOfBirth: string, classId?: string) => {
     setStudentClassName(className);
     localStorage.setItem("qlhs_student_class", className);
+    // Create and persist student profile
+    const profile: StudentProfile = {
+      studentName,
+      className,
+      dateOfBirth,
+      classId: classId || undefined,
+      grade: parseInt(className) as any || 11,
+    };
+    storageService.saveStudentProfile(profile);
+    setStudentProfile(profile);
+    setIsFirstStudentLogin(!localStorage.getItem("qlhs_student_profile"));
+    localStorage.setItem("qlhs_student_profile", JSON.stringify(profile));
+    // Clear ?class= from URL after successful login
+    if (classId) window.history.replaceState({}, "", window.location.pathname);
     setStudentSubView("DASHBOARD");
   };
 
   const handleStudentExitClass = () => {
     setStudentClassName(null);
     localStorage.removeItem("qlhs_student_class");
+    localStorage.removeItem("qlhs_student_profile");
+    storageService.clearStudentProfile();
+    setStudentProfile(null);
     setStudentSubView("DASHBOARD");
   };
 
@@ -272,10 +298,31 @@ export default function App() {
     );
   }
 
+  // ─── Restore student profile from localStorage on mount ──────────────────
+  useEffect(() => {
+    if (role !== "STUDENT") return;
+    if (studentClassName && studentProfile) return; // Already have profile
+    const saved = localStorage.getItem("qlhs_student_profile");
+    if (!saved) return;
+    try {
+      const profile: StudentProfile = JSON.parse(saved);
+      if (profile.className && profile.studentName) {
+        setStudentClassName(profile.className);
+        storageService.saveStudentProfile(profile);
+        setStudentProfile(profile);
+        setStudentSubView("DASHBOARD");
+      } else {
+        localStorage.removeItem("qlhs_student_profile");
+      }
+    } catch {
+      localStorage.removeItem("qlhs_student_profile");
+    }
+  }, [role, studentClassName, studentProfile]);
+
   // ─── Student Interface ──────────────────────────────────────────────────
 
-  // Step 1: Enter class name
-  if (!studentClassName) {
+  // Step 1: Enter student info (only if no saved profile)
+  if (!studentClassName || !studentProfile) {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <NetworkStatusBanner />
