@@ -25,7 +25,7 @@ import {
   Exam,
 } from "../../types";
 import { LessonManager } from "./LessonManager";
-import { QuestionBankManager } from "./QuestionBankManager";
+
 import { ExamManager } from "./ExamManager";
 import { AppsScriptGuideModal } from "./AppsScriptGuideModal";
 import { SettingsModal } from "./SettingsModal";
@@ -313,7 +313,7 @@ export function AdminDashboard({
           }`}
         >
           <BookOpen className="w-4 h-4" />
-          <span>QUẢN LÝ BÀI HỌC (32 BÀI)</span>
+          <span>BÀI HỌC ({lessons.length})</span>
         </button>
 
         <button
@@ -326,18 +326,6 @@ export function AdminDashboard({
         >
           <FileCheck2 className="w-4 h-4 text-indigo-400" />
           <span>ĐỀ KIỂM TRA ({exams.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("QUESTIONS")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === "QUESTIONS"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-          }`}
-        >
-          <HelpCircle className="w-4 h-4" />
-          <span>NGÂN HÀNG CÂU HỎI ({questions.length})</span>
         </button>
       </div>
 
@@ -558,7 +546,7 @@ export function AdminDashboard({
 
       {/* TAB 2: STUDENT PRESENCE */}
       {activeTab === "CLASSES" && <ClassManager />}
-      {activeTab === "STUDENTS" && <StudentPresencePanel />}
+      {activeTab === "STUDENTS" && <StudentPresencePanel submissions={submissions} lessons={lessons} />}
 
       {/* TAB 2: LESSONS MANAGEMENT */}
       {activeTab === "LESSONS" && (
@@ -583,17 +571,7 @@ export function AdminDashboard({
         />
       )}
 
-      {/* TAB 4: QUESTIONS BANK MANAGEMENT */}
-      {activeTab === "QUESTIONS" && (
-        <QuestionBankManager
-          questions={questions}
-          lessons={lessons}
-          onAddQuestion={onAddQuestion}
-          onUpdateQuestion={onUpdateQuestion}
-          onDeleteQuestion={onDeleteQuestion}
-          onBulkImport={onBulkImportQuestions}
-        />
-      )}
+
 
       {/* Settings Modal */}
       <SettingsModal
