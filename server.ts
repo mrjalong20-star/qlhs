@@ -9,7 +9,7 @@ const SUPER_ADMIN_USERNAME = process.env.SUPER_ADMIN_USERNAME || "admin";
 const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || "admin@123456";
 const GOOGLE_APPS_SCRIPT_URL = process.env.GOOGLE_APPS_SCRIPT_URL || "";
 let pool: Pool | null = null; let dbReady: Promise<void> | null = null;
-function getPool(){ if(!process.env.DATABASE_URL) return null; if(!pool) pool=new Pool({connectionString:process.env.DATABASE_URL,max:3,idleTimeoutMillis:10000,connectionTimeoutMillis:10000,ssl:process.env.NODE_ENV==="production"?{rejectUnauthorized:false}:undefined}); return pool; }
+function getPool(){ if(!process.env.DATABASE_URL) return null; if(!pool) pool=new Pool({connectionString:process.env.DATABASE_URL,max:15,min:2,idleTimeoutMillis:30000,connectionTimeoutMillis:5000,ssl:process.env.NODE_ENV==="production"?{rejectUnauthorized:false}:undefined}); return pool; }
 async function initDatabase(){ const db=getPool(); if(!db)return; await db.query(`
 CREATE TABLE IF NOT EXISTS app_teachers(username TEXT PRIMARY KEY,password TEXT NOT NULL,display_name TEXT NOT NULL,active BOOLEAN NOT NULL DEFAULT TRUE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS app_classes(id TEXT PRIMARY KEY,name TEXT NOT NULL,class_code TEXT NOT NULL,school_year TEXT NOT NULL DEFAULT '',grade INTEGER NOT NULL DEFAULT 6,teacher_username TEXT NOT NULL,teacher_name TEXT NOT NULL,students JSONB NOT NULL DEFAULT '[]'::jsonb,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
@@ -24,8 +24,18 @@ CREATE TABLE IF NOT EXISTS app_progress(id TEXT PRIMARY KEY,student_id TEXT NOT 
 CREATE TABLE IF NOT EXISTS app_registration_codes(code TEXT PRIMARY KEY,created_by TEXT NOT NULL,display_name TEXT NOT NULL DEFAULT '',used_by TEXT,used_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 ALTER TABLE app_classes ADD COLUMN IF NOT EXISTS grade INTEGER NOT NULL DEFAULT 6;
 CREATE INDEX IF NOT EXISTS app_submissions_payload_gin ON app_submissions USING GIN(payload);
+CREATE INDEX IF NOT EXISTS app_submissions_recorded_at_idx ON app_submissions(recorded_at DESC);
 CREATE INDEX IF NOT EXISTS app_classes_teacher_idx ON app_classes(teacher_username);
+CREATE INDEX IF NOT EXISTS app_classes_class_code_idx ON app_classes(class_code);
 CREATE INDEX IF NOT EXISTS app_presence_last_seen_idx ON app_presence(last_seen_ms);
+CREATE INDEX IF NOT EXISTS app_presence_session_idx ON app_presence(session_id);
+CREATE INDEX IF NOT EXISTS app_sessions_token_idx ON app_sessions(token);
+CREATE INDEX IF NOT EXISTS app_lessons_teacher_idx ON app_lessons(teacher_username);
+CREATE INDEX IF NOT EXISTS app_lessons_grade_idx ON app_lessons(grade);
+CREATE INDEX IF NOT EXISTS app_questions_teacher_idx ON app_questions(teacher_username);
+CREATE INDEX IF NOT EXISTS app_questions_grade_idx ON app_questions(grade);
+CREATE INDEX IF NOT EXISTS app_exams_teacher_idx ON app_exams(teacher_username);
+CREATE INDEX IF NOT EXISTS app_exams_grade_idx ON app_exams(grade);
 `); }
 async function ensureDatabase(){ if(!getPool())return; if(!dbReady) dbReady=initDatabase().catch(err=>{dbReady=null;throw err;}); await dbReady; }
 async function query<T=any>(text:string,values:any[]=[]){ await ensureDatabase(); const db=getPool(); if(!db)throw new Error("DATABASE_URL chưa được cấu hình."); return db.query(text,values); }

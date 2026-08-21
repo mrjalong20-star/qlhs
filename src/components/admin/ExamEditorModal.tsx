@@ -123,6 +123,15 @@ export function ExamEditorModal({
   const [showLessonPicker, setShowLessonPicker] = useState(false);
   const [pickedLessonIds, setPickedLessonIds] = useState<string[]>([]);
 
+  // Duration-based question count presets
+  const getDurationPreset = (mins: number) => {
+    if (mins <= 15) return { p1: 8, p2: 0, p3: 2, label: "10 câu" };
+    if (mins <= 20) return { p1: 10, p2: 2, p3: 3, label: "15 câu" };
+    if (mins <= 30) return { p1: 14, p2: 3, p3: 3, label: "20 câu" };
+    return { p1: 18, p2: 4, p3: 6, label: "28 câu" };
+  };
+  const durationPreset = getDurationPreset(durationMinutes);
+
   // Validation Error
   const [error, setError] = useState<string | null>(null);
 
@@ -415,7 +424,13 @@ export function ExamEditorModal({
                 <label className="block text-xs font-bold text-slate-700">Thể loại / Nhãn đề</label>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCategory(v);
+                    if (v === "15 PHÚT") setDurationMinutes(15);
+                    else if (v === "GIỮA KÌ" || v === "CUỐI KÌ") setDurationMinutes(45);
+                    else if (v === "1 TIẾT") setDurationMinutes(90);
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="GIỮA KÌ">GIỮA KÌ (45 - 50 phút)</option>
@@ -699,13 +714,12 @@ export function ExamEditorModal({
                 <button
                   type="button"
                   onClick={() => {
-                    // Auto-pick random questions from all available
                     const pool = allAvailableQuestions;
                     const poolP1 = pool.filter(q => q.part === "PART_1");
                     const poolP2 = pool.filter(q => q.part === "PART_2");
                     const poolP3 = pool.filter(q => q.part === "PART_3");
                     const shuffle = (arr: Question[]) => [...arr].sort(() => Math.random() - 0.5);
-                    const picked = [...shuffle(poolP1).slice(0, 18), ...shuffle(poolP2).slice(0, 4), ...shuffle(poolP3).slice(0, 6)];
+                    const picked = [...shuffle(poolP1).slice(0, durationPreset.p1), ...shuffle(poolP2).slice(0, durationPreset.p2), ...shuffle(poolP3).slice(0, durationPreset.p3)];
                     setSelectedQuestionIds(picked.map(q => q.id));
                     setShowLessonPicker(false);
                     setPickMode("MANUAL");
@@ -713,7 +727,7 @@ export function ExamEditorModal({
                   className="px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer flex items-center gap-1.5 bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Bốc nhanh 28 câu</span>
+                  <span>Bốc nhanh {durationPreset.label}</span>
                 </button>
               </div>
             </div>
