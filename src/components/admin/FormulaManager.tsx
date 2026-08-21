@@ -18,7 +18,7 @@ export function FormulaManager() {
   const load = async () => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/formulas?grade=${grade}`);
+      const r = await fetch(`/api/content/formulas?grade=${grade}`);
       const j = await r.json();
       setItems(j.success ? j.data || [] : []);
     } finally { setLoading(false); }
@@ -28,7 +28,7 @@ export function FormulaManager() {
   const save = async () => {
     const token = authService.get()?.token;
     const method = form.id ? "PATCH" : "POST";
-    const url = form.id ? `/api/formulas?id=${encodeURIComponent(form.id)}` : "/api/formulas";
+    const url = form.id ? `/api/content/formulas/${encodeURIComponent(form.id)}` : "/api/content/formulas";
     const r = await fetch(url, { method, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ ...form, grade }) });
     const j = await r.json();
     if (!r.ok || !j.success) return alert(j.message || "Không thể lưu công thức.");
@@ -38,7 +38,7 @@ export function FormulaManager() {
   const remove = async (id: string) => {
     if (!confirm("Xóa công thức này?")) return;
     const token = authService.get()?.token;
-    const r = await fetch(`/api/formulas?id=${encodeURIComponent(id)}`, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    const r = await fetch(`/api/content/formulas/${encodeURIComponent(id)}`, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
     const j = await r.json();
     if (!r.ok || !j.success) return alert(j.message || "Không thể xóa công thức.");
     await load();

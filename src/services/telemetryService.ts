@@ -1,6 +1,6 @@
 import { StudentActivity, StudentPresence, StudentProfile } from "../types";
 
-const SESSION_KEY = "geo11_student_session_id";
+const SESSION_KEY = "toan_student_session_id";
 
 function getSessionId(): string {
   let id = localStorage.getItem(SESSION_KEY);

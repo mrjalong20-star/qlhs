@@ -76,7 +76,7 @@ export function QuestionBankManager({
       <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-            <span>Ngân Hàng Câu Hỏi Địa Lí 11</span>
+            <span>Ngân Hàng Câu Hỏi Toán THCS & THPT</span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold">
               {questions.length} câu
             </span>
@@ -132,7 +132,7 @@ export function QuestionBankManager({
           onChange={(e) => setSelectedLessonId(e.target.value)}
           className="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-sky-500 font-medium"
         >
-          <option value="ALL">Tất cả các bài học (32 bài)</option>
+          <option value="ALL">Tất cả các bài học</option>
           {lessons.map((l) => (
             <option key={l.id} value={l.id}>
               Bài {l.lessonNumber}. {l.title.slice(0, 28)}...

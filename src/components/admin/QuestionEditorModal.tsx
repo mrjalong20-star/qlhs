@@ -292,7 +292,7 @@ export function QuestionEditorModal({
                 type="text"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
-                placeholder="Ví dụ: Niên giám thống kê 2024"
+                placeholder="Ví dụ: Đề kiểm tra Toán 11 kỳ I, Swift Code 50024"
                 className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-sky-500"
               />
             </div>
@@ -419,7 +419,7 @@ export function QuestionEditorModal({
                     type="text"
                     value={unit}
                     onChange={(e) => setUnit(e.target.value)}
-                    placeholder="Ví dụ: % hoặc tỉ USD"
+                    placeholder="Ví dụ: cm, m, %, độ..."
                     className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl"
                   />
                 </div>
