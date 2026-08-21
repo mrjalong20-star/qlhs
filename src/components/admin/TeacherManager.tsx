@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { UserPlus, RefreshCw, Lock, Unlock, KeyRound, Copy, CheckCircle } from "lucide-react";
+import { RefreshCw, Lock, Unlock, KeyRound, Copy, CheckCircle } from "lucide-react";
 import { authService } from "../../services/authService";
 
 interface Teacher { username: string; displayName: string; active: boolean; createdAt: string; }
@@ -8,9 +8,6 @@ interface RegCode { code: string; createdBy: string; displayName: string; usedBy
 export function TeacherManager() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [regCodes, setRegCodes] = useState<RegCode[]>([]);
-  const [displayName, setDisplayName] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [codeCount, setCodeCount] = useState(1);
@@ -34,24 +31,6 @@ export function TeacherManager() {
   }
 
   useEffect(() => { load(); }, []);
-
-  async function create() {
-    if (!displayName || !username || !password) { setMessage('Nhập đủ tên, tài khoản và mật khẩu.'); return; }
-    setLoading(true); setMessage('');
-    try {
-      const r = await fetch('/api/teachers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authService.headers() },
-        body: JSON.stringify({ displayName, username, password })
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.message);
-      setDisplayName(''); setUsername(''); setPassword('');
-      setMessage('Đã tạo tài khoản giáo viên.');
-      await load();
-    } catch (e: any) { setMessage(e.message || 'Tạo giáo viên thất bại.'); }
-    finally { setLoading(false); }
-  }
 
   async function generateCodes() {
     setLoading(true); setMessage('');
@@ -108,14 +87,6 @@ export function TeacherManager() {
           </div>
           <button onClick={load} className="px-3 py-2 rounded-xl border text-xs font-bold"><RefreshCw className="inline w-3.5 h-3.5 mr-1" />Cập nhật</button>
         </div>
-        <div className="grid md:grid-cols-3 gap-2">
-          <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Tên giáo viên" className="px-4 py-3 rounded-xl border bg-slate-50 text-sm" />
-          <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Tài khoản" className="px-4 py-3 rounded-xl border bg-slate-50 text-sm" />
-          <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Mật khẩu" type="password" className="px-4 py-3 rounded-xl border bg-slate-50 text-sm" />
-        </div>
-        <button disabled={loading} onClick={create} className="px-5 py-3 rounded-xl bg-slate-900 text-white text-xs font-bold">
-          <UserPlus className="inline w-4 h-4 mr-2" />Tạo tài khoản giáo viên
-        </button>
         {message && <div className="p-3 rounded-xl bg-sky-50 text-sky-800 text-xs">{message}</div>}
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
