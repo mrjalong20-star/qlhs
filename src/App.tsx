@@ -79,8 +79,18 @@ export default function App() {
   const handleSwitchRole = () => {
     setRole("NONE");
     localStorage.removeItem("qlhs_user_role");
+    localStorage.removeItem("qlhs_student_class");
+    localStorage.removeItem("qlhs_student_profile");
+    localStorage.removeItem("toan_student_session_id");
+    storageService.clearStudentProfile();
+    setStudentProfile(null);
+    setStudentClassName(null);
     setCurrentView("LESSONS");
     setStudentSubView("DASHBOARD");
+    // Remove ?class= from URL so useState initializer doesn't re-select STUDENT
+    if (window.location.search.includes("class=")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   };
 
   const handleStudentEnterClass = (className: string, studentName: string, dateOfBirth: string, classId?: string) => {

@@ -150,7 +150,15 @@ export function ExamManager({
             className="px-4 py-2.5 rounded-2xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-extrabold text-xs border border-blue-200 transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
           >
             <Upload className="w-4 h-4 text-blue-600" />
-            <span>TẠO TỪ FILE WORD (.DOCX)</span>
+            <span>TẠO TỪ WORD</span>
+          </button>
+
+          <button
+            onClick={() => handleOpenCreate("AUTO")}
+            className="px-4 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-extrabold text-xs border border-emerald-200 transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
+          >
+            <BookOpen className="w-4 h-4 text-emerald-600" />
+            <span>TẠO TỪ BÀI GIẢNG</span>
           </button>
 
           <button
@@ -158,7 +166,7 @@ export function ExamManager({
             className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md shadow-indigo-200 transition-all flex items-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>TẠO ĐỀ KIỂM TRA MỚI</span>
+            <span>TẠO MỚI</span>
           </button>
         </div>
       </div>

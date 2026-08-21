@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Lock, Unlock, Upload, Trash2, Plus, Search, BookOpen } from "lucide-react";
+import { Lock, Unlock, Upload, Search, BookOpen } from "lucide-react";
 import { Lesson, Question } from "../../types";
 
 interface LessonManagerProps {
@@ -17,10 +17,6 @@ export function LessonManager({
 }: LessonManagerProps) {
   const [query, setQuery] = useState("");
   const [gradeFilter, setGradeFilter] = useState<number | "ALL">("ALL");
-  const [showUpload, setShowUpload] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newChapter, setNewChapter] = useState("");
-  const [newGrade, setNewGrade] = useState<number>(6);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filter lessons
@@ -42,27 +38,6 @@ export function LessonManager({
       return l;
     });
     onBatchUpdateLessons(updated);
-  };
-
-  const handleAddLesson = () => {
-    if (!newTitle.trim()) return;
-    const id = `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const newLesson: Lesson = {
-      id,
-      lessonNumber: lessons.length + 1,
-      title: newTitle.trim(),
-      chapter: newChapter.trim() || "Chưa phân chương",
-      grade: newGrade as 6 | 7 | 8 | 9 | 10 | 11 | 12,
-      semester: 1,
-      durationMinutes: 45,
-      allowReview: true,
-      reviewMode: "FULL",
-      isLocked: true,
-    };
-    onBatchUpdateLessons([newLesson, ...lessons]);
-    setNewTitle("");
-    setNewChapter("");
-    setShowUpload(false);
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,33 +86,12 @@ export function LessonManager({
           <button onClick={() => handleLockAll(true)} className="px-3 py-2 rounded-lg bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 cursor-pointer">
             Khóa hết
           </button>
-          <button onClick={() => setShowUpload(!showUpload)} className="px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 cursor-pointer flex items-center gap-1">
-            <Plus className="w-3.5 h-3.5" /> Thêm bài
-          </button>
           <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold cursor-pointer flex items-center gap-1">
             <Upload className="w-3.5 h-3.5" /> Tải bài lên
           </button>
           <input ref={fileInputRef} type="file" accept=".json" onChange={handleImportFile} className="hidden" />
         </div>
       </div>
-
-      {/* Add lesson form */}
-      {showUpload && (
-        <div className="bg-white rounded-xl border border-blue-200 p-4 space-y-3">
-          <p className="text-xs font-bold text-blue-700">Thêm bài học mới</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Tên bài học *" className="px-3 py-2 rounded-lg border border-slate-200 text-sm" />
-            <input type="text" value={newChapter} onChange={(e) => setNewChapter(e.target.value)} placeholder="Chương / chủ đề" className="px-3 py-2 rounded-lg border border-slate-200 text-sm" />
-            <select value={newGrade} onChange={(e) => setNewGrade(Number(e.target.value))} className="px-3 py-2 rounded-lg border border-slate-200 text-sm">
-              {[6, 7, 8, 9, 10, 11, 12].map((g) => <option key={g} value={g}>Khối {g}</option>)}
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handleAddLesson} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer">Thêm</button>
-            <button onClick={() => setShowUpload(false)} className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold cursor-pointer">Hủy</button>
-          </div>
-        </div>
-      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
@@ -159,7 +113,7 @@ export function LessonManager({
           <div className="py-12 text-center text-slate-400">
             <BookOpen className="w-10 h-10 mx-auto mb-2 text-slate-300" />
             <p className="text-sm font-semibold text-slate-500">Chưa có bài học</p>
-            <p className="text-xs text-slate-400 mt-1">Nhấn "Thêm bài" hoặc "Tải bài lên" để bắt đầu</p>
+            <p className="text-xs text-slate-400 mt-1">Nhấn "Tải bài lên" để import danh sách bài học từ file JSON</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

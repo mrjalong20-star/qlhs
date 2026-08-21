@@ -24,7 +24,6 @@ interface AppLayoutProps {
 }
 
 const TEACHER_NAV: NavItem[] = [
-  { id: "DASHBOARD", label: "Trang chủ", icon: Compass },
   { id: "ADMIN", label: "Quản lý", icon: Settings2, adminOnly: true },
   { id: "ASSIGNMENTS", label: "Giao bài", icon: ClipboardList, adminOnly: true },
 ];
