@@ -31,6 +31,11 @@ type UserRole = "NONE" | "TEACHER" | "STUDENT";
 
 export default function App() {
   const [role, setRole] = useState<UserRole>(() => {
+    // If URL has ?class=xxx, auto-select STUDENT role immediately
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("class")) {
+      localStorage.setItem("qlhs_user_role", "STUDENT");
+      return "STUDENT";
+    }
     const saved = localStorage.getItem("qlhs_user_role");
     if (saved === "TEACHER" || saved === "STUDENT") return saved;
     return "NONE";
@@ -57,14 +62,7 @@ export default function App() {
   const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState(false);
   const [isGasGuideOpen, setIsGasGuideOpen] = useState(false);
 
-  // Auto-detect ?class= from URL → set role to STUDENT on mount
-  useEffect(() => {
-    const classId = new URLSearchParams(window.location.search).get("class");
-    if (classId && !localStorage.getItem("qlhs_user_role")) {
-      setRole("STUDENT");
-      localStorage.setItem("qlhs_user_role", "STUDENT");
-    }
-  }, []);
+
 
   const persistAssignments = (a: Assignment[]) => {
     setAssignments(a);
